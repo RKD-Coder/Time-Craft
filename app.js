@@ -1,0 +1,1827 @@
+const STORAGE_KEY = 'smartTimetableData_v3';
+let state = {
+  setup: { schoolName:'', academicYear:'', periodsPerDay:8, periodDuration:45, breakAfter:4, breakDuration:20, workingDays:['Mon','Tue','Wed','Thu','Fri','Sat'], schoolLogo:null },
+  teachers: [], subjects: [], classes: [], timetable: null
+};
+let editingIds = { teacher:null, subject:null, class:null, classSubj:null };
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function load(){ const s=localStorage.getItem(STORAGE_KEY); if(s){ try{ state={...state, ...JSON.parse(s)}; }catch(e){} } }
+load();
+
+const ALL_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const $ = id => document.getElementById(id);
+
+document.querySelectorAll('.tab[data-tab]').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab[data-tab]').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.add('hidden'));
+    $('tab-'+t.dataset.tab).classList.remove('hidden');
+    if(t.dataset.tab==='teachers') renderTeachers();
+    if(t.dataset.tab==='subjects') renderSubjects();
+    if(t.dataset.tab==='classes') renderClasses();
+    if(t.dataset.tab==='generate') renderGenerateStats();
+    if(t.dataset.tab==='view') renderViewTab();
+  });
+});
+
+function toast(msg, type='success'){
+  const colors={success:'bg-emerald-600',error:'bg-red-600',warn:'bg-amber-600',info:'bg-indigo-600'};
+  const el=document.createElement('div');
+  el.className=`toast ${colors[type]||colors.info}`;
+  el.innerHTML=`<span>${msg}</span>`;
+  $('toastContainer').appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(100%)';setTimeout(()=>el.remove(),300);},3500);
+}
+function closeModal(id){ $(id).classList.add('hidden'); }
+function toggleDownloadMenu(){ $('downloadMenu').classList.toggle('hidden'); }
+
+/* SETUP */
+function renderWorkingDays(){
+  $('workingDays').innerHTML = ALL_DAYS.map(d=>`
+    <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900/40 border border-slate-700 cursor-pointer hover:border-indigo-500">
+      <input type="checkbox" value="${d}" ${state.setup.workingDays.includes(d)?'checked':''} class="accent-indigo-500">
+      <span class="text-sm">${d}</span>
+    </label>`).join('');
+}
+function handleImageUpload(event, type){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.setup[type] = e.target.result;
+    const previewId = type === 'schoolLogo' ? 'logoPreview' : 'signPreview';
+    $(previewId).src = e.target.result;
+    $(previewId).classList.remove('hidden');
+    save();
+    toast('Image uploaded!');
+  };
+  reader.readAsDataURL(file);
+}
+function saveSetup(){
+  state.setup.schoolName=$('schoolName').value;
+  state.setup.academicYear=$('academicYear').value;
+  state.setup.periodsPerDay=parseInt($('periodsPerDay').value)||8;
+  state.setup.periodDuration=parseInt($('periodDuration').value)||45;
+  state.setup.breakAfter=parseInt($('breakAfter').value)||4;
+  state.setup.breakDuration=parseInt($('breakDuration').value)||20;
+  state.setup.workingDays=[...document.querySelectorAll('#workingDays input:checked')].map(x=>x.value);
+  save(); toast('School configuration saved!');
+}
+function loadSetupUI(){
+  $('schoolName').value=state.setup.schoolName;
+  $('academicYear').value=state.setup.academicYear;
+  $('periodsPerDay').value=state.setup.periodsPerDay;
+  $('periodDuration').value=state.setup.periodDuration;
+  $('breakAfter').value=state.setup.breakAfter;
+  $('breakDuration').value=state.setup.breakDuration;
+  renderWorkingDays();
+  if(state.setup.schoolLogo){
+    $('logoPreview').src = state.setup.schoolLogo;
+    $('logoPreview').classList.remove('hidden');
+  }
+  if(state.setup.principalSign){
+    $('signPreview').src = state.setup.principalSign;
+    $('signPreview').classList.remove('hidden');
+  }
+}
+loadSetupUI();
+
+/* TEACHERS */
+function toggleSelectAll(containerId, btn) {
+  const checkboxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]`);
+  if(checkboxes.length === 0) return;
+  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+  checkboxes.forEach(cb => cb.checked = !allChecked);
+  btn.textContent = allChecked ? 'Select All' : 'Deselect All';
+}
+
+function nextTeacherId(){
+  let n=1;
+  while(state.teachers.some(t=>t.id==='T'+String(n).padStart(3,'0'))) n++;
+  return 'T'+String(n).padStart(3,'0');
+}
+function openTeacherModal(id){
+  editingIds.teacher=id;
+  $('teacherModalTitle').textContent = id?'Edit Teacher':'Add Teacher';
+  const t = id?state.teachers.find(x=>x.id===id):null;
+  $('tId').value = t?t.id:nextTeacherId();
+  $('tId').readOnly = !!t;
+  $('tName').value = t?t.name:'';
+  $('tLevel').value = t?t.level:'TGT';
+  $('tMaxDay').value = t?t.maxPerDay:6;
+  $('tMaxWeek').value = t?t.maxPerWeek:30;
+  
+  $('tSubjects').innerHTML = state.subjects.length?
+    state.subjects.map(s=>`<label class="flex items-center gap-2 text-sm p-2 rounded bg-slate-900/40 hover:bg-slate-800/60 cursor-pointer">
+      <input type="checkbox" value="${s.id}" ${t&&t.subjects.includes(s.id)?'checked':''} class="accent-indigo-500"> ${s.code} - ${s.name}</label>`).join(''):
+    '<div class="text-xs text-slate-400 col-span-3 p-2">No subjects added yet.</div>';
+    
+  $('tClasses').innerHTML = state.classes.length?
+    state.classes.map(c=>`<label class="flex items-center gap-2 text-sm p-2 rounded bg-slate-900/40 hover:bg-slate-800/60 cursor-pointer">
+      <input type="checkbox" value="${c.id}" ${t&&t.eligibleClasses&&t.eligibleClasses.includes(c.id)?'checked':''} class="accent-indigo-500"> 
+      ${c.name} ${c.section?'-'+c.section:''} ${c.course?'('+c.course+')':''}</label>`).join(''):
+    '<div class="text-xs text-slate-400 col-span-3 p-2">No classes added yet.</div>';
+    
+  $('tUnavailable').innerHTML = ALL_DAYS.map(d=>`
+    <label class="flex items-center gap-1 px-2 py-1.5 rounded bg-slate-900/40 border border-slate-700 cursor-pointer text-xs">
+      <input type="checkbox" value="${d}" ${t&&t.unavailableDays&&t.unavailableDays.includes(d)?'checked':''} class="accent-red-500"> ${d}
+    </label>`).join('');
+  $('teacherModal').classList.remove('hidden');
+}
+function saveTeacher(){
+  const id=$('tId').value.trim()||nextTeacherId();
+  const name=$('tName').value.trim();
+  if(!name){ toast('Teacher name required','error'); return; }
+  if(state.teachers.some(t=>t.id===id && t.id!==editingIds.teacher)){
+    toast('Teacher ID already exists','error'); return;
+  }
+  const subjects=[...document.querySelectorAll('#tSubjects input:checked')].map(x=>x.value);
+  const eligibleClasses=[...document.querySelectorAll('#tClasses input:checked')].map(x=>x.value);
+  const unavailableDays=[...document.querySelectorAll('#tUnavailable input:checked')].map(x=>x.value);
+  const data={ id, name, level:$('tLevel').value, subjects, eligibleClasses, maxPerDay:parseInt($('tMaxDay').value)||6, maxPerWeek:parseInt($('tMaxWeek').value)||30, unavailableDays };
+  
+  if(editingIds.teacher){
+    const i=state.teachers.findIndex(t=>t.id===editingIds.teacher);
+    state.teachers[i]=data;
+  } else state.teachers.push(data);
+  
+  // Sort by ID
+  state.teachers.sort((a,b) => a.id.localeCompare(b.id));
+  
+  save(); closeModal('teacherModal'); renderTeachers();
+  toast('Teacher saved successfully!');
+}
+function deleteTeacher(id){
+  if(!confirm('Delete this teacher?')) return;
+  state.teachers=state.teachers.filter(t=>t.id!==id);
+  state.classes.forEach(c=>c.subjects.forEach(s=>s.teacherIds=s.teacherIds.filter(t=>t!==id)));
+  save(); renderTeachers(); toast('Teacher deleted','warn');
+}
+function renderTeachers(){
+  $('teachersTable').innerHTML = state.teachers.length? state.teachers.map(t=>{
+    const subjNames=t.subjects.map(sid=>{const s=state.subjects.find(x=>x.id===sid);return s?s.code:'';}).filter(Boolean);
+    const clsNames=t.eligibleClasses&&t.eligibleClasses.length?t.eligibleClasses.map(cid=>{const c=state.classes.find(x=>x.id===cid);return c?`${c.name.replace('Class ','')}${c.section?'-'+c.section:''}`:'';}).filter(Boolean):[];
+    return `<tr>
+      <td><span class="badge badge-blue">${t.id}</span></td>
+      <td><span class="badge badge-purple">${t.level||'TGT'}</span></td>
+      <td class="font-semibold">${t.name}</td>
+      <td>${subjNames.length?subjNames.map(s=>`<span class="subject-tag mr-1">${s}</span>`).join(''):'—'}</td>
+      <td class="text-xs">${clsNames.length?clsNames.join(', '):'—'}</td>
+      <td><span class="badge badge-amber">${t.maxPerDay}/day</span></td>
+      <td><span class="badge badge-green">${t.maxPerWeek}/wk</span></td>
+      <td>
+        <button class="btn btn-primary" style="padding:.3rem .6rem" onclick="openTeacherMapping('${t.id}')">Map Classes</button>
+        <button class="btn btn-ghost" style="padding:.3rem .6rem" onclick="openTeacherModal('${t.id}')">✏️</button>
+        <button class="btn btn-danger" style="padding:.3rem .6rem" onclick="deleteTeacher('${t.id}')">🗑️</button>
+      </td>
+    </tr>`;}).join(''): '<tr><td colspan="8" class="text-center text-slate-500 py-8">No teachers added.</td></tr>';
+}
+
+let currentMappingTeacherId = null;
+
+function openTeacherMapping(tId) {
+  currentMappingTeacherId = tId;
+  const t = state.teachers.find(x => x.id === tId);
+  $('teacherMappingTitle').textContent = `Map Subjects for ${t.name}`;
+  
+  const eligibleClasses = state.classes.filter(c => isTeacherEligibleForClass(t, c));
+  
+  let html = '';
+  if(eligibleClasses.length === 0) {
+    html = '<div class="text-slate-400 p-4 text-center">This teacher is not eligible for any classes. Please update their Teaching Level or Eligible Classes.</div>';
+  } else {
+    html = eligibleClasses.map(c => {
+      let subjHtml = t.subjects.map(sid => {
+        const subj = state.subjects.find(s => s.id === sid);
+        if(!subj) return '';
+        const classSubj = c.subjects.find(cs => cs.subjectId === sid);
+        const isAssigned = classSubj && classSubj.teacherIds.includes(t.id);
+        
+        return `<label class="flex items-center gap-2 text-sm p-2 bg-slate-900/40 hover:bg-slate-800/60 rounded cursor-pointer">
+          <input type="checkbox" class="mapping-cb accent-indigo-500" data-class="${c.id}" data-subject="${sid}" ${isAssigned ? 'checked' : ''}>
+          ${subj.name} (${subj.code})
+        </label>`;
+      }).join('');
+      
+      if(!subjHtml) subjHtml = '<div class="text-xs text-slate-500 p-2">No subjects assigned to this teacher in their profile.</div>';
+      
+      return `<div class="p-4 bg-slate-800 rounded-lg border border-slate-700">
+        <div class="font-bold text-slate-200 mb-3">${c.name} ${c.section||''} ${c.course?'('+c.course+')':''}</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">${subjHtml}</div>
+      </div>`;
+    }).join('');
+  }
+  
+  $('teacherMappingArea').innerHTML = html;
+  $('teacherMappingModal').classList.remove('hidden');
+}
+
+function saveTeacherMapping() {
+  const checkboxes = document.querySelectorAll('.mapping-cb');
+  
+  const intended = {};
+  checkboxes.forEach(cb => {
+    const cid = cb.dataset.class;
+    const sid = cb.dataset.subject;
+    if(!intended[cid]) intended[cid] = {};
+    intended[cid][sid] = cb.checked;
+  });
+  
+  state.classes.forEach(c => {
+    if(intended[c.id]) {
+      Object.keys(intended[c.id]).forEach(sid => {
+        const isChecked = intended[c.id][sid];
+        let cs = c.subjects.find(x => x.subjectId === sid);
+        
+        if(isChecked) {
+          if(!cs) {
+            cs = { subjectId: sid, teacherIds: [], periods: 5 };
+            c.subjects.push(cs);
+          }
+          if(!cs.teacherIds.includes(currentMappingTeacherId)) {
+            cs.teacherIds.push(currentMappingTeacherId);
+          }
+        } else {
+          if(cs) {
+            cs.teacherIds = cs.teacherIds.filter(tid => tid !== currentMappingTeacherId);
+          }
+        }
+      });
+    }
+  });
+  
+  save();
+  closeModal('teacherMappingModal');
+  toast('Teacher mapping saved successfully!', 'success');
+}
+
+/* SUBJECTS */
+function openSubjectModal(id){
+  editingIds.subject=id;
+  $('subjectModalTitle').textContent = id?'Edit Subject':'Add Subject';
+  const s = id?state.subjects.find(x=>x.id===id):null;
+  $('sCode').value = s?s.code:'';
+  $('sName').value = s?s.name:'';
+  $('sType').value = s?s.type:'theory';
+  
+  $('sElective').innerHTML = state.subjects.filter(x=>x.id!==id).length ?
+    state.subjects.filter(x=>x.id!==id).map(x=>
+      `<label class="flex items-center gap-2 text-sm p-2 rounded bg-slate-900/40 hover:bg-slate-800/60 cursor-pointer">
+        <input type="checkbox" value="${x.id}" ${s&&s.alternativeIds&&s.alternativeIds.includes(x.id)?'checked':''} class="accent-indigo-500 s-alt-cb"> ${x.code} — ${x.name}
+      </label>`).join('') :
+    '<div class="text-xs text-slate-400 col-span-2 p-2">Add more subjects first to create elective groups.</div>';
+  $('sTough').checked = s ? (s.tough !== false && (s.tough || isAutoToughSubject(s))) : false;
+  $('sPriority').value = s && s.priority ? s.priority : 'semi-main';
+  $('subjectModal').classList.remove('hidden');
+}
+function isAutoToughSubject(s){
+  if(!s) return false;
+  const toughCodes=['PHY','CHM','MAT','BIO','ACC','SCI','MATH','MATHS'];
+  return toughCodes.includes(s.code) || /physics|chemistry|mathematics|biology|accountancy|science/i.test(s.name);
+}
+function saveSubject(){
+  const code=$('sCode').value.trim().toUpperCase();
+  const name=$('sName').value.trim();
+  if(!code||!name){ toast('Code and Name required','error'); return; }
+  if(state.subjects.some(s=>s.code===code && s.id!==editingIds.subject)){
+    toast('Subject code must be unique','error'); return;
+  }
+  const altIds=[...document.querySelectorAll('#sElective .s-alt-cb:checked')].map(o=>o.value);
+  const tough=$('sTough').checked;
+  const priority=$('sPriority').value;
+  const data={ id:editingIds.subject||'sub_'+Date.now(), code, name, type:$('sType').value, priority, alternativeIds:altIds, tough };
+  
+  if(editingIds.subject){
+    const i=state.subjects.findIndex(s=>s.id===editingIds.subject);
+    data.id = state.subjects[i].id;
+    state.subjects[i]=data;
+  } else state.subjects.push(data);
+  
+  state.subjects.sort((a,b) => a.code.localeCompare(b.code));
+  
+  syncAlternativeGroups(data.id, altIds);
+  
+  save(); closeModal('subjectModal'); renderSubjects();
+  toast('Subject saved!');
+}
+function deleteSubject(id){
+  if(!confirm('Delete this subject?')) return;
+  state.subjects=state.subjects.filter(s=>s.id!==id);
+  state.teachers.forEach(t=>t.subjects=t.subjects.filter(sid=>sid!==id));
+  state.classes.forEach(c=>c.subjects=c.subjects.filter(s=>s.subjectId!==id));
+  save(); renderSubjects(); toast('Subject deleted','warn');
+}
+function syncAlternativeGroups(subjectId, altIds){
+  state.subjects.forEach(sx=>{
+    if(sx.id===subjectId) return;
+    if(altIds.includes(sx.id)){
+      if(!sx.alternativeIds) sx.alternativeIds=[];
+      if(!sx.alternativeIds.includes(subjectId)) sx.alternativeIds.push(subjectId);
+      altIds.forEach(aid=>{
+        if(aid!==sx.id && !sx.alternativeIds.includes(aid)) sx.alternativeIds.push(aid);
+      });
+    } else if(sx.alternativeIds){
+      sx.alternativeIds=sx.alternativeIds.filter(id=>id!==subjectId);
+    }
+  });
+  const allInGroup=new Set([subjectId,...altIds]);
+  state.subjects.forEach(sx=>{
+    if(allInGroup.has(sx.id)){
+      if(!sx.alternativeIds) sx.alternativeIds=[];
+      allInGroup.forEach(oid=>{
+        if(oid!==sx.id && !sx.alternativeIds.includes(oid)) sx.alternativeIds.push(oid);
+      });
+    }
+  });
+}
+function getElectiveGroup(subjectId){
+  const subj=state.subjects.find(s=>s.id===subjectId);
+  if(!subj||!subj.alternativeIds||!subj.alternativeIds.length) return [subjectId];
+  return [subjectId,...subj.alternativeIds];
+}
+function renderSubjects(){
+  $('subjectsTable').innerHTML = state.subjects.length? state.subjects.map(s=>{
+    const altNames = s.alternativeIds&&s.alternativeIds.length ? s.alternativeIds.map(aid=>state.subjects.find(x=>x.id===aid)?.name).join(', ') : '—';
+    const typeBadge={theory:'badge-blue',practical:'badge-purple',activity:'badge-green',language:'badge-amber'}[s.type]||'badge-blue';
+    const subjPriority = s.priority || 'semi-main';
+    const priorityBadge = subjPriority === 'main' ? '<span class="badge badge-amber">Main</span>' : (subjPriority === 'free' ? '<span class="badge badge-green">Free</span>' : '<span class="badge badge-blue">Semi-Main</span>');
+    return `<tr>
+      <td><span class="badge badge-blue">${s.code}</span></td>
+      <td class="font-semibold">${s.name}</td>
+      <td><span class="badge ${typeBadge}">${s.type}</span></td>
+      <td>${priorityBadge}</td>
+      <td class="text-xs text-slate-300">${altNames}</td>
+      <td>
+        <button class="btn btn-ghost" style="padding:.3rem .6rem" onclick="openSubjectModal('${s.id}')">✏️</button>
+        <button class="btn btn-danger" style="padding:.3rem .6rem" onclick="deleteSubject('${s.id}')">🗑️</button>
+      </td>
+    </tr>`;}).join(''): '<tr><td colspan="6" class="text-center text-slate-500 py-8">No subjects added yet.</td></tr>';
+}
+
+/* CLASSES */
+function handleClassNameChange(){
+  const name=$('cName').value;
+  const isSenior = name==='Class 11' || name==='Class 12';
+  if(isSenior){
+    $('cSection').value='';
+    $('cSection').disabled=true;
+    $('cSectionWrap').style.opacity='0.5';
+    $('cCourse').disabled=false;
+  } else {
+    $('cSection').disabled=false;
+    $('cSectionWrap').style.opacity='1';
+    $('cCourse').value='';
+    $('cCourse').disabled=true;
+  }
+}
+function openClassModal(id){
+  editingIds.class=id;
+  $('classModalTitle').textContent = id?'Edit Class':'Add Class';
+  const c = id?state.classes.find(x=>x.id===id):null;
+  $('cName').value = c?c.name:'Class 1';
+  $('cSection').value = c?c.section:'A';
+  $('cCourse').value = c?c.course:'';
+  handleClassNameChange();
+  $('classModal').classList.remove('hidden');
+}
+function saveClass(){
+  const name=$('cName').value;
+  const section=$('cSection').value.trim().toUpperCase();
+  const course=$('cCourse').value;
+  const isSenior = name==='Class 11' || name==='Class 12';
+  
+  if(isSenior){
+    if(!course){ toast('Course stream required for 11th/12th','error'); return; }
+    if(state.classes.some(c=>c.name===name&&c.course===course&&c.id!==editingIds.class)){
+      toast('This class/course already exists','error'); return;
+    }
+  } else {
+    if(!section){ toast('Section required','error'); return; }
+    if(state.classes.some(c=>c.name===name&&c.section===section&&c.id!==editingIds.class)){
+      toast('This class/section already exists','error'); return;
+    }
+  }
+  
+  const existing=editingIds.class?state.classes.find(x=>x.id===editingIds.class):null;
+  
+  let subjects = existing ? existing.subjects : [];
+  if (!existing) {
+    const siblingClass = state.classes.find(c => c.name === name && c.subjects && c.subjects.length > 0);
+    if (siblingClass) {
+      subjects = siblingClass.subjects.map(cs => ({ subjectId: cs.subjectId, periodsPerWeek: cs.periodsPerWeek, teacherIds: [] }));
+      setTimeout(() => toast(`Subjects automatically copied from ${siblingClass.name} ${siblingClass.section||siblingClass.course||''}`, 'info'), 500);
+    }
+  }
+  
+  const data={ id:editingIds.class||'cls_'+Date.now(), name, section:isSenior?'':section, course:isSenior?course:'', subjects };
+  if(editingIds.class){
+    const i=state.classes.findIndex(c=>c.id===editingIds.class);
+    state.classes[i]=data;
+  } else state.classes.push(data);
+  
+  state.classes.sort((a,b) => {
+    const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
+    const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
+    if(numA !== numB) return numA - numB;
+    const secA = a.section || a.course || '';
+    const secB = b.section || b.course || '';
+    return secA.localeCompare(secB);
+  });
+  
+  save(); closeModal('classModal'); renderClasses();
+  toast('Class saved!');
+}
+function deleteClass(id){
+  if(!confirm('Delete this class?')) return;
+  state.classes=state.classes.filter(c=>c.id!==id);
+  save(); renderClasses(); toast('Class deleted','warn');
+}
+function openClassSubjectsModal(clsId){
+  editingIds.classSubj=clsId;
+  const cls=state.classes.find(c=>c.id===clsId);
+  $('classSubjectsTitle').textContent=`Subjects for ${cls.name} ${cls.section?'-'+cls.section:''} ${cls.course?'('+cls.course+')':''}`;
+  let html=`<table class="w-full text-left border-collapse mt-2">
+    <thead><tr class="border-b border-slate-700">
+      <th class="pb-2 text-slate-300">Include</th>
+      <th class="pb-2 text-slate-300">Subject</th>
+      <th class="pb-2 text-slate-300">Periods/Week</th>
+      <th class="pb-2 text-slate-300 text-center">Priority</th>
+      <th class="pb-2 text-slate-300">Eligible Teachers</th>
+    </tr></thead>
+    <tbody class="divide-y divide-slate-800/50">`;
+  state.subjects.forEach(subj => {
+    const mapped = cls.subjects.find(s => s.subjectId === subj.id);
+    const checked = mapped ? 'checked' : '';
+    const periods = mapped ? mapped.periodsPerWeek : '';
+    const subjPriority = subj.priority || 'semi-main';
+    const priorityBadge = subjPriority === 'main' ? '<span class="badge badge-amber">Main</span>' : (subjPriority === 'free' ? '<span class="badge badge-green">Free</span>' : '<span class="badge badge-blue">Semi-Main</span>');
+    const eligibleT = state.teachers.filter(t => t.subjects.includes(subj.id) && (!t.eligibleClasses || t.eligibleClasses.includes(cls.id)));
+    const tCheckboxes = eligibleT.map(t => `
+      <label class="flex items-center gap-1 text-xs p-1.5 rounded bg-slate-900/40 cursor-pointer hover:bg-slate-800/60 transition-colors">
+        <input type="checkbox" data-subj="${subj.id}" data-tid="${t.id}" ${mapped && mapped.teacherIds.includes(t.id) ? 'checked' : ''} class="accent-indigo-500"> <span class="truncate max-w-[100px]" title="${t.name}">${t.name}</span>
+      </label>`).join('');
+    html += `<tr class="hover:bg-slate-800/20 transition-colors">
+      <td class="py-3 text-center"><input type="checkbox" data-subj="${subj.id}" class="include-cb accent-indigo-500 w-4 h-4 cursor-pointer" ${checked} onchange="toggleSubjInput(this)"></td>
+      <td class="py-3"><strong class="text-indigo-300">${subj.code}</strong> <span class="text-xs text-slate-400 block">${subj.name}</span></td>
+      <td class="py-3"><input type="number" min="0" max="15" value="${periods}" data-subj="${subj.id}" class="input w-20 periods-inp" ${mapped ? '' : 'disabled'}></td>
+      <td class="py-3 text-center">${priorityBadge}</td>
+      <td class="py-3"><div class="flex flex-wrap gap-1.5">${tCheckboxes || '<span class="text-xs text-slate-500 italic">No eligible teachers</span>'}</div></td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  $('classSubjectsArea').innerHTML=html;
+  const isSenior=cls.name==='Class 11'||cls.name==='Class 12';
+  $('applyStreamBtn').style.display=isSenior&&cls.course?'inline-flex':'none';
+  $('classSubjectsModal').classList.remove('hidden');
+}
+const STREAM_TEMPLATES={
+  'Medical':{sub_ENG:5,sub_PHY:7,sub_CHM:7,sub_BIO:7,sub_COM:4},
+  'Non-Medical':{sub_ENG:5,sub_PHY:7,sub_CHM:7,sub_MAT:7,sub_PE:4},
+  'Commerce':{sub_ENG:5,sub_ACC:8,sub_BST:7,sub_ECO:7,sub_INF:4},
+  'Arts':{sub_ENG:5,sub_HIS:8,sub_ECO:6,sub_HIN:5,sub_PE:4}
+};
+function applyStreamTemplate(){
+  const cls=state.classes.find(c=>c.id===editingIds.classSubj);
+  if(!cls||!cls.course||!STREAM_TEMPLATES[cls.course]) return;
+  const tmpl=STREAM_TEMPLATES[cls.course];
+  state.subjects.forEach(subj=>{
+    const key='sub_'+subj.code;
+    const periods=tmpl[key];
+    const cb=document.querySelector(`.include-cb[data-subj="${subj.id}"]`);
+    const inp=document.querySelector(`.periods-inp[data-subj="${subj.id}"]`);
+    if(!cb||!inp) return;
+    if(periods){
+      cb.checked=true; inp.disabled=false; inp.value=periods;
+      const eligible=state.teachers.filter(t=>t.subjects.includes(subj.id)&&(!t.eligibleClasses||!t.eligibleClasses.length||t.eligibleClasses.includes(cls.id)));
+      document.querySelectorAll(`input[data-subj="${subj.id}"][data-tid]`).forEach(tcb=>{
+        tcb.checked=eligible.some(t=>t.id===tcb.dataset.tid);
+      });
+    } else {
+      cb.checked=false; inp.disabled=true; inp.value='';
+    }
+  });
+  toast(`Applied ${cls.course} stream template (CBSE pattern)`,'info');
+}
+function toggleSubjInput(cb){
+  const inp=document.querySelector(`.periods-inp[data-subj="${cb.dataset.subj}"]`);
+  inp.disabled=!cb.checked;
+  if(!cb.checked) {
+    inp.value='';
+  }
+  if(cb.checked && !inp.value) inp.value=5;
+}
+function saveClassSubjects(){
+  const cls=state.classes.find(c=>c.id===editingIds.classSubj);
+  cls.subjects=[];
+  document.querySelectorAll('.include-cb:checked').forEach(cb => {
+    const subjId=cb.dataset.subj;
+    const periods=parseInt(document.querySelector(`.periods-inp[data-subj="${subjId}"]`).value)||0;
+    const teacherIds=[...document.querySelectorAll(`input[data-subj="${subjId}"][data-tid]:checked`)].map(x=>x.dataset.tid);
+    if(periods>0 && teacherIds.length>0){
+      cls.subjects.push({ subjectId:subjId, periodsPerWeek:periods, teacherIds });
+    }
+  });
+  save(); closeModal('classSubjectsModal'); renderClasses();
+  toast('Subjects mapped successfully!');
+  
+  const siblingClasses = state.classes.filter(c => c.name === cls.name && c.id !== cls.id);
+  if(siblingClasses.length > 0) {
+    const currentSubjectIds = cls.subjects.map(s => s.subjectId);
+    let missingSections = [];
+    siblingClasses.forEach(sib => {
+      const sibSubjectIds = sib.subjects.map(s => s.subjectId);
+      const hasMissing = currentSubjectIds.some(sid => !sibSubjectIds.includes(sid));
+      if(hasMissing) {
+        missingSections.push(sib.section || sib.course || sib.id);
+      }
+    });
+    if(missingSections.length > 0) {
+      setTimeout(() => toast(`Note: Section(s) ${missingSections.join(', ')} do not have some of these subjects.`, 'warn'), 1000);
+    }
+  }
+}
+function renderClasses(){
+  $('classesTable').innerHTML = state.classes.length? state.classes.map(c=>{
+    const totalPeriods=c.subjects.reduce((a,s)=>a+s.periodsPerWeek,0);
+    const slots=state.setup.periodsPerDay*state.setup.workingDays.length;
+    const fit = totalPeriods<=slots;
+    const subjList = c.subjects.length ? c.subjects.map(s => {
+      const sub = state.subjects.find(x=>x.id===s.subjectId);
+      return `<span class="subject-tag mr-1 mb-1">${sub?.code}:${s.periodsPerWeek}p</span>`;
+    }).join('') : '<span class="text-slate-500">No subjects mapped</span>';
+    return `<tr>
+      <td class="font-semibold">${c.name} ${c.section?'-'+c.section:''}</td>
+      <td>${c.course?`<span class="badge badge-purple">${c.course}</span>`:'<span class="text-slate-500">General</span>'}</td>
+      <td>${subjList}</td>
+      <td>${totalPeriods} / ${slots} ${fit?'<span class="badge badge-green ml-1">OK</span>':'<span class="badge badge-red ml-1">Over</span>'}</td>
+      <td>
+        <button class="btn btn-primary" style="padding:.3rem .6rem" onclick="openClassSubjectsModal('${c.id}')">📚 Manage</button>
+        <button class="btn btn-ghost" style="padding:.3rem .6rem" onclick="openClassModal('${c.id}')">✏️</button>
+        <button class="btn btn-danger" style="padding:.3rem .6rem" onclick="deleteClass('${c.id}')">🗑️</button>
+      </td>
+    </tr>`;}).join(''): '<tr><td colspan="5" class="text-center text-slate-500 py-8">No classes added yet.</td></tr>';
+}
+
+/* GENERATE */
+function renderGenerateStats(){
+  $('statClasses').textContent=state.classes.length;
+  $('statTeachers').textContent=state.teachers.length;
+  $('statSlots').textContent=state.classes.length*state.setup.periodsPerDay*state.setup.workingDays.length;
+}
+function validateBeforeGeneration(){
+  const errors=[], warnings=[], teacherIssues=[];
+  if(state.classes.length===0) errors.push('No classes defined');
+  if(state.teachers.length===0) errors.push('No teachers defined');
+  if(state.subjects.length===0) errors.push('No subjects defined');
+  if(state.setup.workingDays.length===0) errors.push('No working days selected');
+  const totalSlots=state.setup.periodsPerDay*state.setup.workingDays.length;
+  const days=state.setup.workingDays.length;
+  state.classes.forEach(c=>{
+    const label=`${c.name}${c.section?'-'+c.section:''}${c.course?' ('+c.course+')':''}`;
+    if(!c.subjects.length) errors.push(`${label}: No subjects mapped`);
+    const total=c.subjects.reduce((a,s)=>a+s.periodsPerWeek,0);
+    if(total<totalSlots) warnings.push(`${label}: ${total} periods/week vs ${totalSlots} slots — extra slots will use revision/repeat periods.`);
+    if(total>totalSlots) errors.push(`${label}: ${total} periods/week exceeds ${totalSlots} available slots. Reduce subject load.`);
+    c.subjects.forEach(s=>{
+      const subj=state.subjects.find(x=>x.id===s.subjectId);
+      const subjName=subj?subj.code:'Unknown';
+      if(!s.teacherIds||!s.teacherIds.length) errors.push(`${label}: No teacher assigned for ${subjName}`);
+      else {
+        const eligible=state.teachers.filter(t=>t.subjects.includes(s.subjectId)&&(!t.eligibleClasses||!t.eligibleClasses.length||t.eligibleClasses.includes(c.id)));
+        if(!eligible.length) teacherIssues.push(`${label}: No eligible teacher in system for ${subjName} (mapped IDs may be invalid)`);
+        const weeklyCap=eligible.reduce((mx,t)=>mx+Math.min(t.maxPerWeek,s.periodsPerWeek),0);
+        if(eligible.length && weeklyCap<s.periodsPerWeek) teacherIssues.push(`${label}: Possible teacher shortage for ${subjName} — need ${s.periodsPerWeek}p/wk, combined eligible capacity ~${weeklyCap}p/wk`);
+      }
+      const maxFitPerWeek=days*2;
+      if(s.periodsPerWeek>maxFitPerWeek && s.periodsPerWeek<=totalSlots)
+        warnings.push(`${label}: ${subjName} has ${s.periodsPerWeek}p/wk — will exceed 2/day limit on some days (required to meet quota).`);
+    });
+  });
+  const seniorLevels=['Class 11','Class 12'];
+  seniorLevels.forEach(lvl=>{
+    const group=state.classes.filter(c=>c.name===lvl);
+    if(group.length>1){
+      const commonSubjIds=[...new Set(group.flatMap(c=>c.subjects.map(s=>s.subjectId)))].filter(sid=>{
+        return group.filter(c=>c.subjects.some(s=>s.subjectId===sid)).length>=2;
+      });
+      if(commonSubjIds.length) warnings.push(`${lvl}: ${commonSubjIds.length} common subject(s) across streams will be synchronized in same periods (CBSE/KVS pattern).`);
+    }
+  });
+  let html='';
+  if(errors.length) html+=`<div class="p-4 rounded-xl bg-red-500/10 border border-red-500/30 mb-3"><div class="font-bold text-red-300 mb-2">❌ Critical Errors:</div><ul class="list-disc list-inside text-sm space-y-1">${errors.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
+  if(teacherIssues.length) html+=`<div class="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30 mb-3"><div class="font-bold text-orange-300 mb-2">👨‍🏫 Teacher Shortage Risks:</div><ul class="list-disc list-inside text-sm space-y-1">${teacherIssues.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
+  if(warnings.length) html+=`<div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30"><div class="font-bold text-amber-300 mb-2">⚠️ Warnings:</div><ul class="list-disc list-inside text-sm space-y-1">${warnings.map(w=>`<li>${w}</li>`).join('')}</ul></div>`;
+  if(!errors.length && !warnings.length && !teacherIssues.length) html=`<div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">✅ All checks passed!</div>`;
+  $('genErrors').innerHTML=html;
+  $('genErrors').classList.remove('hidden');
+}
+
+function logMsg(msg,type='info'){
+  const colors={info:'text-slate-300',success:'text-emerald-400',warn:'text-amber-400',error:'text-red-400',step:'text-indigo-300 font-bold'};
+  const div=document.createElement('div');
+  div.className=colors[type]||colors.info;
+  div.innerHTML=msg;
+  $('genLog').appendChild(div);
+  $('genLog').scrollTop=$('genLog').scrollHeight;
+}
+
+function getSubjectDifficulty(subjectId){
+  const s=state.subjects.find(x=>x.id===subjectId);
+  if(!s) return 0;
+  if(s.tough||isAutoToughSubject(s)) return 100;
+  if(s.type==='practical') return 70;
+  if(s.type==='theory') return 50;
+  if(s.type==='language') return 40;
+  if(s.type==='activity') return 10;
+  return 30;
+}
+
+function getClassLabel(cls){
+  return `${cls.name}${cls.section?'-'+cls.section:''}${cls.course?' ('+cls.course+')':''}`;
+}
+
+function canAssignSubjectToday(dailyCount, remainingWeekly, daysLeftIncludingToday, priority='semi-main'){
+  let maxPerDay = (priority === 'free') ? 1 : 2;
+  if(dailyCount < maxPerDay) return true;
+  const minNeededToday = Math.max(0, remainingWeekly - (daysLeftIncludingToday - 1) * maxPerDay);
+  return dailyCount < minNeededToday;
+}
+
+function countConsecutiveBefore(timetable, tid, d, p){
+  let n=0;
+  for(let i=p-1;i>=0;i--){
+    if(timetable.teachers[tid][d][i]) n++;
+    else break;
+  }
+  return n;
+}
+
+function isTeacherSlotFree(timetable, tid, d, p, day, opts={}){
+  const t=state.teachers.find(x=>x.id===tid);
+  if(!t) return false;
+  if(t.unavailableDays&&t.unavailableDays.includes(day)) return false;
+  if(timetable.teachers[tid][d][p]) return false;
+  if(!opts.ignoreDailyCap && timetable.teacherDailyCount[tid][day]>=t.maxPerDay) return false;
+  if(timetable.teacherWeeklyCount[tid]>=t.maxPerWeek) return false;
+  if(countConsecutiveBefore(timetable,tid,d,p)>=3) return false;
+  return true;
+}
+
+function getAllTeachersForSubject(subjectId, classId, preferredIds=[], timetable=null){
+  const preferred=new Set(preferredIds||[]);
+  const pool=state.teachers.filter(t=>{
+    if(!t.subjects.includes(subjectId)) return false;
+    if(t.eligibleClasses&&t.eligibleClasses.length&&!t.eligibleClasses.includes(classId)) return false;
+    return true;
+  });
+  const tt=timetable||state.timetable;
+  return [...pool].sort((a,b)=>{
+    const ap=preferred.has(a.id)?0:1, bp=preferred.has(b.id)?0:1;
+    if(ap!==bp) return ap-bp;
+    return (tt?.teacherWeeklyCount?.[a.id]||0)-(tt?.teacherWeeklyCount?.[b.id]||0);
+  });
+}
+
+function pickTeacherForSlot(timetable, subjectId, classId, preferredIds, d, p, day){
+  const candidates=getAllTeachersForSubject(subjectId, classId, preferredIds, timetable);
+  for(const tObj of candidates){
+    if(isTeacherSlotFree(timetable,tObj.id,d,p,day)) return tObj.id;
+  }
+  for(const tObj of candidates){
+    if(isTeacherSlotFree(timetable,tObj.id,d,p,day,{ignoreDailyCap:true})) return tObj.id;
+  }
+  return null;
+}
+
+function initPlanningState(days, periods){
+  const plan={
+    subjectPlan:{},
+    remaining:{},
+    dailyCount:{},
+    errors:[],
+    warnings:[]
+  };
+  state.classes.forEach(c=>{
+    plan.subjectPlan[c.id]=Array(days.length).fill(null).map(()=>Array(periods).fill(null));
+    plan.remaining[c.id]={};
+    plan.dailyCount[c.id]={};
+    days.forEach(dy=>{
+      plan.dailyCount[c.id][dy]={};
+      c.subjects.forEach(s=>plan.dailyCount[c.id][dy][s.subjectId]=0);
+    });
+    c.subjects.forEach(s=>plan.remaining[c.id][s.subjectId]=s.periodsPerWeek);
+  });
+  return plan;
+}
+
+function getSubjectCandidates(cls, plan, day, dayIdx, periodIdx, electiveUsedThisSlot){
+  const days=state.setup.workingDays;
+  const daysLeft=days.length-dayIdx;
+  const p=periodIdx;
+  const preferTough=p<5;
+  const list=[];
+  cls.subjects.forEach(s=>{
+    const rem=plan.remaining[cls.id][s.subjectId]||0;
+    if(rem<=0) return;
+    const daily=plan.dailyCount[cls.id][day][s.subjectId]||0;
+    const subj=state.subjects.find(x=>x.id===s.subjectId);
+    const priority = subj ? (subj.priority || 'semi-main') : 'semi-main';
+    
+    if(!canAssignSubjectToday(daily,rem,daysLeft, priority)) return;
+    
+    const group=getElectiveGroup(s.subjectId);
+    const isElective=group.length>1;
+    if(isElective){
+      const conflict=group.some(gid=>electiveUsedThisSlot.has(gid)&&!electiveUsedThisSlot.has(s.subjectId));
+      if(conflict) return;
+    }
+    let score=getSubjectDifficulty(s.subjectId);
+    if(preferTough) score+=50; else score=100-score;
+    score+=rem*2;
+    
+    if(priority === 'main' && daily === 0) {
+      score += 10000;
+    } else if (priority === 'main' && daily >= 1) {
+      score -= 50;
+    } else if (priority === 'free') {
+      score -= 5000;
+    }
+    
+    list.push({subjectId:s.subjectId, score, isElective, group, periodsPerWeek:s.periodsPerWeek, teacherIds:s.teacherIds});
+  });
+  list.sort((a,b)=>b.score-a.score);
+  return list;
+}
+
+function assignSubjectToSlot(plan, cls, day, dayIdx, periodIdx, subjectId){
+  plan.subjectPlan[cls.id][dayIdx][periodIdx]=subjectId;
+  plan.remaining[cls.id][subjectId]--;
+  plan.dailyCount[cls.id][day][subjectId]=(plan.dailyCount[cls.id][day][subjectId]||0)+1;
+}
+
+function fillSeniorSlot(levelClasses, plan, days, dayIdx, periodIdx){
+  const day=days[dayIdx];
+  const electiveUsed=new Set();
+  levelClasses.forEach(cls=>{
+    const sid=plan.subjectPlan[cls.id][dayIdx][periodIdx];
+    if(sid) getElectiveGroup(sid).forEach(id=>electiveUsed.add(id));
+  });
+
+  const commonMap={};
+  levelClasses.forEach(cls=>{
+    if(plan.subjectPlan[cls.id][dayIdx][periodIdx]) return;
+    getSubjectCandidates(cls,plan,day,dayIdx,periodIdx,electiveUsed).forEach(c=>{
+      if(!commonMap[c.subjectId]) commonMap[c.subjectId]=[];
+      commonMap[c.subjectId].push(cls);
+    });
+  });
+
+  Object.entries(commonMap).filter(([,arr])=>arr.length>=2).sort((a,b)=>b[1].length-a[1].length).forEach(([subjId,arr])=>{
+    arr.forEach(cls=>{
+      if(!plan.subjectPlan[cls.id][dayIdx][periodIdx]&&(plan.remaining[cls.id][subjId]||0)>0){
+        assignSubjectToSlot(plan,cls,day,dayIdx,periodIdx,subjId);
+        getElectiveGroup(subjId).forEach(id=>electiveUsed.add(id));
+      }
+    });
+  });
+
+  const unassigned=levelClasses.filter(cls=>!plan.subjectPlan[cls.id][dayIdx][periodIdx]);
+  if(unassigned.length>=2){
+    const electiveClasses=unassigned.filter(cls=>{
+      const cands=getSubjectCandidates(cls,plan,day,dayIdx,periodIdx,electiveUsed);
+      return cands.some(c=>c.isElective);
+    });
+    if(electiveClasses.length>=2){
+      const assignedSubs=new Set();
+      electiveClasses.forEach(cls=>{
+        const cands=getSubjectCandidates(cls,plan,day,dayIdx,periodIdx,electiveUsed).filter(c=>c.isElective);
+        const pick=cands.find(c=>!assignedSubs.has(c.subjectId)&&![...assignedSubs].some(as=>c.group.includes(as)));
+        if(pick){
+          assignSubjectToSlot(plan,cls,day,dayIdx,periodIdx,pick.subjectId);
+          assignedSubs.add(pick.subjectId);
+          pick.group.forEach(id=>electiveUsed.add(id));
+        }
+      });
+    }
+  }
+
+  levelClasses.forEach(cls=>{
+    if(plan.subjectPlan[cls.id][dayIdx][periodIdx]) return;
+    const cands=getSubjectCandidates(cls,plan,day,dayIdx,periodIdx,electiveUsed);
+    if(cands.length){
+      assignSubjectToSlot(plan,cls,day,dayIdx,periodIdx,cands[0].subjectId);
+      getElectiveGroup(cands[0].subjectId).forEach(id=>electiveUsed.add(id));
+    }
+  });
+}
+
+function fillJuniorSlot(cls, plan, days, dayIdx, periodIdx){
+  const day=days[dayIdx];
+  if(plan.subjectPlan[cls.id][dayIdx][periodIdx]) return;
+  const electiveUsed=new Set();
+  const cands=getSubjectCandidates(cls,plan,day,dayIdx,periodIdx,electiveUsed);
+  if(cands.length) assignSubjectToSlot(plan,cls,day,dayIdx,periodIdx,cands[0].subjectId);
+}
+
+function fillRemainingSlots(plan, days, periods){
+  state.classes.forEach(cls=>{
+    for(let d=0;d<days.length;d++){
+      const day=days[d];
+      const daysLeft=days.length-d;
+      for(let p=0;p<periods;p++){
+        if(plan.subjectPlan[cls.id][d][p]) continue;
+        let picked=null;
+        const withRem=cls.subjects.filter(s=>(plan.remaining[cls.id][s.subjectId]||0)>0)
+          .sort((a,b)=>(plan.remaining[cls.id][b.subjectId]||0)-(plan.remaining[cls.id][a.subjectId]||0));
+        for(const s of withRem){
+          const daily=plan.dailyCount[cls.id][day][s.subjectId]||0;
+          const rem=plan.remaining[cls.id][s.subjectId];
+          if(canAssignSubjectToday(daily,rem,daysLeft)){ picked=s.subjectId; break; }
+        }
+        if(!picked&&withRem.length) picked=withRem[0].subjectId;
+        if(!picked&&cls.subjects.length){
+          picked=cls.subjects.reduce((best,s)=>{
+            const used=plan.dailyCount[cls.id][day][s.subjectId]||0;
+            const bestUsed=plan.dailyCount[cls.id][day][best]||0;
+            return used<bestUsed?s.subjectId:best;
+          },cls.subjects[0].subjectId);
+          plan.warnings.push(`${getClassLabel(cls)}: Repeat period for ${state.subjects.find(x=>x.id===picked)?.code} on ${day} P${p+1}`);
+        }
+        if(picked){
+          if(plan.remaining[cls.id][picked]>0) plan.remaining[cls.id][picked]--;
+          else plan.warnings.push(`${getClassLabel(cls)}: Extra revision — ${state.subjects.find(x=>x.id===picked)?.code} on ${day} P${p+1}`);
+          plan.subjectPlan[cls.id][d][p]=picked;
+          plan.dailyCount[cls.id][day][picked]=(plan.dailyCount[cls.id][day][picked]||0)+1;
+        } else {
+          plan.errors.push(`Subject shortage: ${getClassLabel(cls)} — no subject available for ${day} P${p+1}`);
+        }
+      }
+    }
+  });
+}
+
+function phase1AssignSubjects(days, periods){
+  logMsg('📚 Phase 1: Assigning subjects to timetable slots...','step');
+  const plan=initPlanningState(days, periods);
+  const juniorClasses=state.classes.filter(c=>c.name!=='Class 11'&&c.name!=='Class 12');
+  const senior11=state.classes.filter(c=>c.name==='Class 11');
+  const senior12=state.classes.filter(c=>c.name==='Class 12');
+
+  for(let d=0;d<days.length;d++){
+    for(let p=0;p<periods;p++){
+      if(senior11.length) fillSeniorSlot(senior11,plan,days,d,p);
+      if(senior12.length) fillSeniorSlot(senior12,plan,days,d,p);
+      juniorClasses.forEach(cls=>fillJuniorSlot(cls,plan,days,d,p));
+    }
+  }
+  fillRemainingSlots(plan,days,periods);
+
+  state.classes.forEach(cls=>{
+    for(let d=0;d<days.length;d++){
+      let filled=0;
+      for(let p=0;p<periods;p++) if(plan.subjectPlan[cls.id][d][p]) filled++;
+      if(filled===0) plan.errors.push(`${getClassLabel(cls)}: Entire day ${days[d]} is empty — could not fill any period`);
+      else if(filled<periods) plan.warnings.push(`${getClassLabel(cls)}: ${days[d]} has only ${filled}/${periods} periods filled before final pass`);
+    }
+    Object.entries(plan.remaining[cls.id]).forEach(([sid,rem])=>{
+      if(rem>0){
+        const subj=state.subjects.find(s=>s.id===sid);
+        plan.errors.push(`Subject shortage: ${getClassLabel(cls)} — ${subj?.code||sid} has ${rem} period(s) unscheduled (weekly quota not met)`);
+      }
+    });
+  });
+  logMsg(`✓ Phase 1 complete — ${plan.errors.length} errors, ${plan.warnings.length} warnings`, plan.errors.length?'error':'success');
+  return plan;
+}
+
+function phase2AssignTeachers(subjectPlan, days, periods){
+  logMsg('👨‍🏫 Phase 2: Assigning teachers to subject slots...','step');
+  const timetable={
+    classes:{}, teachers:{}, teacherDailyCount:{}, teacherWeeklyCount:{},
+    teacherPlan:{}, assignmentErrors:[]
+  };
+  state.classes.forEach(c=>{
+    timetable.classes[c.id]=Array(days.length).fill(null).map(()=>Array(periods).fill(null));
+    timetable.teacherPlan[c.id]=Array(days.length).fill(null).map(()=>Array(periods).fill(null));
+  });
+  state.teachers.forEach(t=>{
+    timetable.teachers[t.id]=Array(days.length).fill(null).map(()=>Array(periods).fill(null));
+    timetable.teacherDailyCount[t.id]={};
+    days.forEach(d=>timetable.teacherDailyCount[t.id][d]=0);
+    timetable.teacherWeeklyCount[t.id]=0;
+  });
+
+  function tryAssignSlot(cls, d, p, day, subjectId){
+    const mapping=cls.subjects.find(s=>s.subjectId===subjectId);
+    const preferredIds=mapping?mapping.teacherIds:[];
+    const teacherId=pickTeacherForSlot(timetable,subjectId,cls.id,preferredIds,d,p,day);
+    if(teacherId){
+      timetable.classes[cls.id][d][p]={subjectId,teacherId};
+      timetable.teacherPlan[cls.id][d][p]=teacherId;
+      timetable.teachers[teacherId][d][p]={classId:cls.id,subjectId};
+      timetable.teacherDailyCount[teacherId][day]++;
+      timetable.teacherWeeklyCount[teacherId]++;
+      return true;
+    }
+    const subj=state.subjects.find(s=>s.id===subjectId);
+    const allPool=getAllTeachersForSubject(subjectId,cls.id,preferredIds,timetable);
+    timetable.assignmentErrors.push(`Teacher shortage: ${getClassLabel(cls)} — ${subj?.code||'?'} on ${day} P${p+1} (checked ${allPool.length} teacher(s): ${allPool.map(t=>t.name).join(', ')||'none'})`);
+    timetable.classes[cls.id][d][p]={subjectId,teacherId:null,unassigned:true};
+    return false;
+  }
+
+  for(let pass=0;pass<2;pass++){
+    for(let d=0;d<days.length;d++){
+      const day=days[d];
+      for(let p=0;p<periods;p++){
+        for(const cls of state.classes){
+          const subjectId=subjectPlan.subjectPlan[cls.id][d][p];
+          if(!subjectId) continue;
+          const existing=timetable.classes[cls.id][d][p];
+          if(existing&&!existing.unassigned&&existing.teacherId) continue;
+          if(existing&&existing.unassigned) timetable.classes[cls.id][d][p]=null;
+          tryAssignSlot(cls,d,p,day,subjectId);
+        }
+      }
+    }
+  }
+
+  state.teachers.forEach(t=>{
+    for(let d=0;d<days.length;d++){
+      let streak=0;
+      for(let p=0;p<periods;p++){
+        if(timetable.teachers[t.id][d][p]){ streak++; if(streak>3) timetable.assignmentErrors.push(`Constraint violation: ${t.name} has ${streak} consecutive periods on ${days[d]} (max 3) — review manually`); }
+        else streak=0;
+      }
+    }
+  });
+
+  logMsg(`✓ Phase 2 complete — ${timetable.assignmentErrors.length} teacher issues`, timetable.assignmentErrors.length?'warn':'success');
+  return timetable;
+}
+
+function phase3Finalize(timetable, subjectPlan){
+  logMsg('📋 Phase 3: Building final timetable...','step');
+  timetable.meta={
+    generatedAt:new Date().toISOString(),
+    phases:['subjects','teachers','final'],
+    subjectShortages:subjectPlan.errors.filter(e=>e.includes('Subject shortage')),
+    teacherShortages:timetable.assignmentErrors.filter(e=>e.includes('Teacher shortage'))
+  };
+  logMsg('✅ Final timetable ready','success');
+  return timetable;
+}
+
+let pendingTimetable = null;
+let pendingSubjectPlan = null;
+
+function forceGenerateTimetable(){
+  if(!pendingTimetable || !pendingSubjectPlan) return;
+  $('genErrors').innerHTML='';
+  $('genErrors').classList.add('hidden');
+  renderGenSuccess(pendingTimetable, pendingSubjectPlan, true);
+}
+
+function renderGenSuccess(timetable, subjectPlan, isForced=false){
+  const days=state.setup.workingDays, periods=state.setup.periodsPerDay;
+  state.timetable=phase3Finalize(timetable,subjectPlan);
+  if(!state.history) state.history = [];
+  state.history.unshift({ timestamp: new Date().toISOString(), timetable: JSON.parse(JSON.stringify(state.timetable)) });
+  if(state.history.length>10) state.history.pop();
+  save();
+
+  let totalFree=0, totalUnassigned=0;
+  state.classes.forEach(c=>{
+    for(let d=0;d<days.length;d++) for(let p=0;p<periods;p++){
+      const slot=state.timetable.classes[c.id][d][p];
+      if(!slot) totalFree++;
+      else if(slot.unassigned||!slot.teacherId) totalUnassigned++;
+    }
+  });
+
+  if(subjectPlan.warnings.length){
+    let warnHtml=`<div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 mb-3"><div class="font-bold text-amber-300 mb-2">⚠️ Generation Warnings:</div><ul class="list-disc list-inside text-sm space-y-1 text-amber-200">${subjectPlan.warnings.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
+    $('genErrors').innerHTML = warnHtml;
+    $('genErrors').classList.remove('hidden');
+  }
+
+  const statusClass=isForced ? 'text-amber-300' : 'text-emerald-300';
+  const bgClass=isForced ? 'bg-amber-500/10 border-amber-500/30' : 'bg-emerald-500/10 border-emerald-500/30';
+  $('genSuccess').innerHTML=`<div class="p-4 rounded-xl ${bgClass} border">
+    <div class="font-bold ${statusClass} mb-2 text-lg">${isForced?'⚠️ Timetable Forced Generated!':'✅ Timetable Generated Successfully!'}</div>
+    <div class="text-sm space-y-1">
+      <div>Flow: Subjects assigned → Teachers assigned → Final timetable built</div>
+      <div>Empty slots: ${totalFree}</div>
+      <div>Main subjects prioritized daily · Free subjects scheduled last</div>
+      <div>Senior streams synchronized for common & elective subjects (CBSE/KVS pattern)</div>
+    </div>
+  </div>`;
+  $('genSuccess').classList.remove('hidden');
+  toast(isForced ? 'Timetable forced!' : 'Timetable generated successfully!', isForced ? 'warn' : 'success');
+}
+
+function generateTimetable(){
+  $('genLog').classList.remove('hidden');
+  $('genLog').innerHTML='';
+  $('genErrors').classList.add('hidden');
+  $('genSuccess').classList.add('hidden');
+
+  logMsg('🚀 Starting 3-phase timetable generation (Subjects → Teachers → Final)...','step');
+  const days=state.setup.workingDays;
+  const periods=state.setup.periodsPerDay;
+
+  const errors=[];
+  if(state.classes.length===0) errors.push('No classes defined');
+  if(state.teachers.length===0) errors.push('No teachers defined');
+  if(state.subjects.length===0) errors.push('No subjects defined');
+  if(days.length===0) errors.push('No working days selected');
+  if(errors.length){
+    $('genErrors').innerHTML=`<div class="p-4 rounded-xl bg-red-500/10 border border-red-500/30"><div class="font-bold text-red-300 mb-2">❌ Cannot Generate:</div><ul class="list-disc list-inside text-sm">${errors.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
+    $('genErrors').classList.remove('hidden');
+    return;
+  }
+
+  const subjectPlan=phase1AssignSubjects(days,periods);
+  const timetable=phase2AssignTeachers(subjectPlan,days,periods);
+
+  const allErrors=[...subjectPlan.errors,...timetable.assignmentErrors];
+  if(allErrors.length > 0){
+    logMsg('❌ Generation aborted due to critical errors. Please resolve them.','error');
+    state.timetable = null;
+    pendingTimetable = timetable;
+    pendingSubjectPlan = subjectPlan;
+    save();
+
+    let errHtml='<div class="p-4 rounded-xl bg-red-500/10 border border-red-500/30 mb-3"><div class="font-bold text-red-300 mb-2">❌ Timetable Generation Failed:</div><div class="text-xs text-red-200 mb-3">Please resolve the following shortages or constraints before generating:</div>';
+    if(subjectPlan.errors.length) errHtml+=`<div class="font-bold text-red-300 mt-2 mb-1">Subject Issues:</div><ul class="list-disc list-inside text-sm space-y-1 text-red-200">${subjectPlan.errors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+    if(timetable.assignmentErrors.length) errHtml+=`<div class="font-bold text-orange-300 mt-3 mb-1">Teacher Issues:</div><ul class="list-disc list-inside text-sm space-y-1 text-orange-200">${timetable.assignmentErrors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+    errHtml += '<div class="mt-4"><button class="btn btn-warn" onclick="forceGenerateTimetable()">⚠️ Force Build Anyway</button></div>';
+    errHtml += '</div>';
+    
+    $('genErrors').innerHTML=errHtml;
+    $('genErrors').classList.remove('hidden');
+    toast('Generation failed. Check errors.','error');
+    return;
+  }
+
+  renderGenSuccess(timetable, subjectPlan);
+}
+
+/* VIEW & DOWNLOADS */
+let currentViewMode='class', currentViewId=null;
+function renderViewTab(){
+  if(!state.timetable){ $('timetableRender').innerHTML='<div class="text-center text-slate-500 py-12">No timetable generated yet.</div>'; return; }
+  switchView(currentViewMode);
+}
+function switchView(mode){
+  currentViewMode=mode;
+  $('viewClassBtn').classList.toggle('active',mode==='class');
+  $('viewTeacherBtn').classList.toggle('active',mode==='teacher');
+  $('viewHistoryBtn').classList.toggle('active',mode==='history');
+  
+  const sel=$('viewSelect');
+  const viewControls=$('viewControls');
+  
+  if(mode==='history'){
+    if(viewControls) viewControls.style.display='none';
+    renderHistory();
+    return;
+  }
+  
+  if(viewControls) viewControls.style.display='flex';
+  if(mode==='class') sel.innerHTML=state.classes.map(c=>`<option value="${c.id}">${c.name} ${c.section?'-'+c.section:''} ${c.course?'('+c.course+')':''}</option>`).join('');
+  else sel.innerHTML=state.teachers.map(t=>`<option value="${t.id}">${t.name} (${t.id})</option>`).join('');
+  currentViewId=sel.value;
+  renderTimetable();
+}
+
+function renderHistory(){
+  if(!state.history || state.history.length===0){
+    $('timetableRender').innerHTML='<div class="text-center text-slate-500 py-12">No history available.</div>';
+    return;
+  }
+  let html = `<div class="card p-5">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold">Timetable Build History</h3>
+      <button class="btn btn-danger text-sm px-3 py-1" onclick="clearAllHistory()">🗑️ Clear All History</button>
+    </div>
+    <div class="space-y-3">`;
+  state.history.forEach((h, i) => {
+    const d = new Date(h.timestamp).toLocaleString();
+    html += `<div class="p-3 bg-slate-800 rounded-lg flex justify-between items-center border border-slate-700 flex-wrap gap-2">
+      <div>
+        <div class="font-semibold text-slate-200">Build at ${d}</div>
+        <div class="text-xs text-slate-400">Total Classes: ${Object.keys(h.timetable.classes).length}</div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-primary text-sm px-3 py-1" onclick="restoreHistory(${i})">Load</button>
+        <button class="btn btn-danger text-sm px-3 py-1" onclick="deleteHistory(${i})">🗑️ Delete</button>
+      </div>
+    </div>`;
+  });
+  html += `</div></div>`;
+  $('timetableRender').innerHTML = html;
+}
+
+function restoreHistory(index){
+  if(!confirm('This will replace your current timetable with this historical version. Proceed?')) return;
+  state.timetable = JSON.parse(JSON.stringify(state.history[index].timetable));
+  save();
+  switchView('class');
+  toast('Timetable restored from history!','success');
+}
+
+function deleteHistory(index){
+  if(!confirm('Delete this history entry?')) return;
+  state.history.splice(index, 1);
+  save();
+  renderHistory();
+  toast('History deleted!','success');
+}
+
+function clearAllHistory(){
+  if(!confirm('Are you sure you want to delete all history? This cannot be undone.')) return;
+  state.history = [];
+  save();
+  renderHistory();
+  toast('All history cleared!','success');
+}
+
+function showInfoModal(title, msg){
+  $('infoModalTitle').textContent = title;
+  $('infoModalBody').textContent = msg;
+  $('infoModal').classList.remove('hidden');
+}
+
+function getTeacherLevelForClass(className) {
+  const num = parseInt(className.replace(/\D/g, ''));
+  if (isNaN(num)) return 'PRT';
+  if (num >= 11) return 'PGT';
+  if (num >= 6) return 'TGT';
+  return 'PRT';
+}
+
+function isTeacherEligibleForClass(teacher, cls) {
+  if (teacher.eligibleClasses && teacher.eligibleClasses.length > 0) {
+    return teacher.eligibleClasses.includes(cls.id);
+  }
+  return teacher.level === getTeacherLevelForClass(cls.name);
+}
+
+let editModeActive = false;
+function toggleEditMode(){
+  editModeActive = !editModeActive;
+  $('editModeBtn').innerHTML = editModeActive ? '✏️ Edit Mode: ON' : '✏️ Edit Mode: OFF';
+  $('editModeBtn').classList.toggle('btn-warn', editModeActive);
+  $('editModeBtn').classList.toggle('btn-ghost', !editModeActive);
+  renderTimetable();
+}
+
+function openEditSlotModal(d, p){
+  if(!editModeActive) return;
+  $('editSlotD').value = d;
+  $('editSlotP').value = p;
+  
+  const days = state.setup.workingDays;
+  $('editSlotTitle').textContent = `Edit Slot: ${days[d]} - Period ${p+1}`;
+  
+  let htmlOpts = '';
+  if(currentViewMode === 'class'){
+    const cls = state.classes.find(c => c.id === currentViewId);
+    const teacherMap = new Map();
+    
+    cls.subjects.forEach(cs => {
+      cs.teacherIds.forEach(tid => {
+        if(!teacherMap.has(tid)) teacherMap.set(tid, []);
+        teacherMap.get(tid).push(cs.subjectId);
+      });
+    });
+    
+    state.teachers.forEach(t => {
+      if(isTeacherEligibleForClass(t, cls)) {
+        if(!teacherMap.has(t.id)) teacherMap.set(t.id, t.subjects);
+      }
+    });
+    
+    teacherMap.forEach((subjIds, tid) => {
+      const t = state.teachers.find(x => x.id === tid);
+      if(!t) return;
+      const subjCodes = subjIds.map(sid => state.subjects.find(s=>s.id===sid)?.code).filter(Boolean).join(', ') || 'No Subjects';
+      
+      const existingT = state.timetable.teachers[tid]?.[d]?.[p];
+      let badge = '<span class="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-300 ml-2">Available</span>';
+      
+      if(existingT && existingT.classId && existingT.classId !== currentViewId) {
+        const conflictingClass = state.classes.find(cc => cc.id === existingT.classId);
+        const className = conflictingClass ? `${conflictingClass.name} ${conflictingClass.section||''}` : '';
+        badge = `<span class="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-300 ml-2 cursor-pointer" onclick="event.stopPropagation(); showInfoModal('Teacher Unavailable', 'Teacher ${t.name} is busy with class ${className} at this time.')">Busy</span>`;
+      }
+      
+      htmlOpts += `<div class="p-2 bg-slate-800 rounded flex justify-between items-center cursor-pointer hover:bg-slate-700 mb-2" onclick="editSlotStep2('${tid}', null, '${subjIds.join(',')}')">
+        <div>
+          <div class="font-bold">${t.name}</div>
+          <div class="text-xs text-slate-400">Subjects: ${subjCodes}</div>
+        </div>
+        <div>${badge}</div>
+      </div>`;
+    });
+  } else {
+    const t = state.teachers.find(x => x.id === currentViewId);
+    const eligibleClasses = state.classes.filter(c => isTeacherEligibleForClass(t, c));
+    
+    eligibleClasses.forEach(c => {
+      let subjIds = [];
+      c.subjects.forEach(cs => {
+        if(cs.teacherIds.includes(t.id)) subjIds.push(cs.subjectId);
+      });
+      if(subjIds.length === 0) subjIds = t.subjects;
+      
+      const subjCodes = subjIds.map(sid => state.subjects.find(s=>s.id===sid)?.code).filter(Boolean).join(', ') || 'No Subjects';
+      
+      const existingC = state.timetable.classes[c.id]?.[d]?.[p];
+      let badge = '<span class="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-300 ml-2">Available</span>';
+      if(existingC && existingC.teacherId && existingC.teacherId !== currentViewId) {
+        const conflictingTeacher = state.teachers.find(tt => tt.id === existingC.teacherId);
+        const teacherName = conflictingTeacher ? conflictingTeacher.name : '';
+        badge = `<span class="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-300 ml-2 cursor-pointer" onclick="event.stopPropagation(); showInfoModal('Class Unavailable', 'Class ${c.name} ${c.section||''} is busy with teacher ${teacherName} at this time.')">Busy</span>`;
+      }
+      
+      htmlOpts += `<div class="p-2 bg-slate-800 rounded flex justify-between items-center cursor-pointer hover:bg-slate-700 mb-2" onclick="editSlotStep2(null, '${c.id}', '${subjIds.join(',')}')">
+        <div>
+          <div class="font-bold">${c.name} ${c.section||''}</div>
+          <div class="text-xs text-slate-400">Subjects: ${subjCodes}</div>
+        </div>
+        <div>${badge}</div>
+      </div>`;
+    });
+  }
+  
+  $('editSlotOptions').innerHTML = htmlOpts || '<div class="text-slate-400">No options available.</div>';
+  $('editSlotModal').classList.remove('hidden');
+}
+
+function editSlotStep2(tId, cId, subjIdsStr) {
+  const subjIds = subjIdsStr ? subjIdsStr.split(',') : [];
+  let html = `<div class="mb-3 flex items-center gap-2">
+    <button class="btn btn-ghost btn-sm px-2 py-1" onclick="openEditSlotModal($('editSlotD').value, $('editSlotP').value)">⬅ Back</button>
+    <div class="font-bold text-sm">Select Subject</div>
+  </div>`;
+  
+  if(subjIds.length === 0) {
+    html += `<div class="text-xs text-slate-400">No subjects available to assign.</div>`;
+  } else {
+    subjIds.forEach(sid => {
+      const subj = state.subjects.find(s => s.id === sid);
+      if(!subj) return;
+      html += `<div class="p-3 bg-slate-800 rounded cursor-pointer hover:bg-slate-700 mb-2 border border-slate-700" onclick="applySlotEdit('${sid}', ${tId ? `'${tId}'` : 'null'}, ${cId ? `'${cId}'` : 'null'})">
+        <div class="font-bold">${subj.name} <span class="text-xs text-slate-400">(${subj.code})</span></div>
+      </div>`;
+    });
+  }
+  $('editSlotOptions').innerHTML = html;
+}
+
+function clearSlot() {
+  applySlotEdit(null, null, null);
+}
+
+function applySlotEdit(subjId, tId, cId = currentViewId) {
+  const d = parseInt($('editSlotD').value);
+  const p = parseInt($('editSlotP').value);
+  
+  let targetClassId = currentViewMode === 'class' ? currentViewId : cId;
+  let targetTeacherId = currentViewMode === 'class' ? tId : currentViewId;
+  
+  if(currentViewMode === 'class'){
+    const oldSlot = state.timetable.classes[targetClassId][d][p];
+    if(oldSlot && oldSlot.teacherId) state.timetable.teachers[oldSlot.teacherId][d][p] = null;
+  } else {
+    const oldSlot = state.timetable.teachers[targetTeacherId][d][p];
+    if(oldSlot && oldSlot.classId) state.timetable.classes[oldSlot.classId][d][p] = null;
+  }
+  
+  if(subjId && targetTeacherId && targetClassId) {
+    const conflictSlot = state.timetable.teachers[targetTeacherId][d][p];
+    if(conflictSlot && conflictSlot.classId) state.timetable.classes[conflictSlot.classId][d][p] = null;
+    
+    const conflictClassSlot = state.timetable.classes[targetClassId][d][p];
+    if(conflictClassSlot && conflictClassSlot.teacherId) state.timetable.teachers[conflictClassSlot.teacherId][d][p] = null;
+    
+    state.timetable.classes[targetClassId][d][p] = { subjectId: subjId, teacherId: targetTeacherId };
+    state.timetable.teachers[targetTeacherId][d][p] = { classId: targetClassId, subjectId: subjId };
+  } else {
+    if(currentViewMode === 'class') state.timetable.classes[targetClassId][d][p] = null;
+    else state.timetable.teachers[targetTeacherId][d][p] = null;
+  }
+  
+  save();
+  closeModal('editSlotModal');
+  renderTimetable();
+  toast('Timetable slot updated!');
+}
+
+function renderTimetable(){
+  if(!state.timetable){ $('timetableRender').innerHTML=''; return; }
+  currentViewId=$('viewSelect').value;
+  const days=state.setup.workingDays, periods=state.setup.periodsPerDay;
+  let title, subtitle, grid;
+  if(currentViewMode==='class'){
+    const cls=state.classes.find(c=>c.id===currentViewId);
+    title=`${cls.name} ${cls.section?'-'+cls.section:''} ${cls.course?'('+cls.course+')':''}`;
+    subtitle='Class Timetable';
+    grid=state.timetable.classes[cls.id];
+  } else {
+    const t=state.teachers.find(x=>x.id===currentViewId);
+    title=t.name;
+    subtitle=`Teacher Timetable · Load: ${state.timetable.teacherWeeklyCount[t.id]||0} / ${t.maxPerWeek} periods/week · ${t.id}`;
+    grid=state.timetable.teachers[t.id];
+  }
+  let html=`<div class="card p-5">
+    <div class="mb-4">
+      <h3 class="text-xl font-bold">${title}</h3>
+      <p class="text-sm text-slate-400">${subtitle}</p>
+      <p class="text-xs text-slate-500 mt-1">${state.setup.schoolName||'School'} · ${state.setup.academicYear||''}</p>
+    </div>
+    <div class="overflow-x-auto scrollbar">
+      <table class="border-collapse" style="min-width:800px">
+        <thead><tr>
+          <th style="width:80px">Day</th>
+          ${Array.from({length:periods},(_,i)=>{
+            let s = `<th class="text-center">P${i+1}</th>`;
+            if (i+1 === state.setup.breakAfter && i+1 < periods) s += `<th class="text-center bg-slate-800 text-slate-400">RECESS</th>`;
+            return s;
+          }).join('')}
+        </tr></thead>
+        <tbody>`;
+  for(let d=0; d<days.length; d++){
+    html+=`<tr><td class="font-bold text-center bg-indigo-500/10">${days[d]}</td>`;
+    for(let p=0; p<periods; p++){
+      const slot=grid[d][p];
+      let content='', cls='timetable-cell';
+      if(!slot){ content='<div class="text-red-400 text-center font-bold">EMPTY</div>'; cls+=' bg-red-500/10'; }
+      else if(slot.unassigned || (currentViewMode==='class' && !slot.teacherId) || (currentViewMode==='teacher' && !slot.classId)){ 
+        const subj=state.subjects.find(s=>s.id===slot.subjectId); 
+        let txt = currentViewMode==='class' ? 'No Teacher' : 'No Class';
+        content=`<div class="font-bold text-amber-300">${subj?.code||''}</div><div class="text-xs text-red-400">${txt}</div>`; 
+        cls+=' filled'; 
+      }
+      else if(slot.free){ content='<div class="text-red-400 text-center font-bold">FREE</div>'; cls+=' bg-red-500/10'; }
+      else if(currentViewMode==='class'){
+        const subj=state.subjects.find(s=>s.id===slot.subjectId);
+        const t=state.teachers.find(x=>x.id===slot.teacherId);
+        content=`<div class="font-bold text-indigo-300">${subj?.code||''}</div><div class="text-xs text-slate-400">${t?.name||''}</div>`;
+        cls+=' filled';
+      } else {
+        const c=state.classes.find(x=>x.id===slot.classId);
+        const subj=state.subjects.find(s=>s.id===slot.subjectId);
+        content=`<div class="font-bold text-purple-300">${c?.name||''} ${c?.section||''}</div><div class="text-xs text-slate-400">${subj?.code||''}</div>`;
+        cls+=' filled';
+      }
+      const clickAttr = editModeActive ? `onclick="openEditSlotModal(${d}, ${p})" style="cursor:pointer; border:1px dashed #64748b;"` : '';
+      html+=`<td><div class="${cls}" ${clickAttr}>${content}</div></td>`;
+      
+      if(p+1 === state.setup.breakAfter && p+1 < periods) {
+        if(d === 0) {
+          html+=`<td rowspan="${days.length}" class="bg-slate-800 text-slate-400 font-bold text-center tracking-widest p-0" style="width:40px;"><div style="writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); margin:auto; letter-spacing: 4px;">RECESS</div></td>`;
+        }
+      }
+    }
+    html+='</tr>';
+  }
+  html+='</tbody></table></div></div>';
+  $('timetableRender').innerHTML=html;
+}
+
+function addPdfHeader(doc, title, subtitle, loadLine){
+  const pageWidth=doc.internal.pageSize.getWidth();
+  const logoSize=50;
+  let textX=40;
+  const headerY=28;
+  if(state.setup.schoolLogo){
+    try{ doc.addImage(state.setup.schoolLogo,'PNG',40,headerY,logoSize,logoSize); textX=40+logoSize+12; }
+    catch(e){ try{ doc.addImage(state.setup.schoolLogo,'JPEG',40,headerY,logoSize,logoSize); textX=40+logoSize+12; }catch(err){} }
+  }
+  doc.setFont(undefined,'bold');
+  doc.setFontSize(16);
+  doc.text(state.setup.schoolName||'School Name',textX,headerY+18);
+  doc.setFontSize(12);
+  doc.setFont(undefined,'normal');
+  doc.text(title,textX,headerY+36);
+  const lineY=headerY+logoSize+8;
+  doc.setDrawColor(99,102,241);
+  doc.setLineWidth(1);
+  doc.line(40,lineY,pageWidth-40,lineY);
+  let curY=lineY+18;
+  if(subtitle){
+    doc.setFontSize(11);
+    doc.setFont(undefined,'bold');
+    doc.text(subtitle,40,curY);
+    curY+=16;
+  }
+  if(loadLine){
+    doc.setFontSize(10);
+    doc.setFont(undefined,'normal');
+    doc.text(loadLine,40,curY);
+    curY+=14;
+  }
+  if(state.setup.academicYear){
+    doc.setFontSize(9);
+    doc.setTextColor(100,100,100);
+    doc.text(`Academic Year: ${state.setup.academicYear}`,40,curY);
+    doc.setTextColor(0,0,0);
+    curY+=12;
+  }
+  return curY+8;
+}
+
+function getPdfFooterHook(doc) {
+  return function(data) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont(undefined, 'normal');
+    doc.text("Created by Time Craft", pageWidth - 40, pageHeight - 20, {align: 'right'});
+  };
+}
+
+function addPdfSignature(doc) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  let sigY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 0) + 40;
+  
+  if(sigY + 50 > pageHeight - 30) {
+    doc.addPage();
+    sigY = 40;
+  }
+  
+  const sigX = pageWidth - 160;
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.text("Principal's Signature", sigX + 25, sigY + 50);
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.5);
+  doc.line(sigX, sigY + 35, sigX + 130, sigY + 35);
+  
+  if (state.setup.principalSign) {
+    try { doc.addImage(state.setup.principalSign, 'PNG', sigX + 15, sigY - 15, 100, 45); }
+    catch(e) { try { doc.addImage(state.setup.principalSign, 'JPEG', sigX + 15, sigY - 15, 100, 45); } catch(err) {} }
+  }
+}
+
+function downloadCurrentPDF(){
+  if(!state.timetable) return;
+  const { jsPDF } = window.jspdf;
+  const doc=new jsPDF('landscape','pt','a4');
+  const days=state.setup.workingDays, periods=state.setup.periodsPerDay;
+  let title, subtitle, loadLine;
+  if(currentViewMode==='class'){
+    const cls=state.classes.find(c=>c.id===currentViewId);
+    title=`${cls.name} ${cls.section?'-'+cls.section:''} ${cls.course?'('+cls.course+')':''}`;
+    subtitle='Class Timetable';
+    loadLine=null;
+  } else {
+    const t=state.teachers.find(x=>x.id===currentViewId);
+    title='Teacher Timetable';
+    subtitle=t.name;
+    loadLine=`Load: ${state.timetable.teacherWeeklyCount[t.id]||0} / ${t.maxPerWeek} periods per week`;
+  }
+  const head=[['Day', ...Array.from({length:periods},(_,i)=>{
+    let arr = [`P${i+1}`];
+    if (i+1 === state.setup.breakAfter && i+1 < periods) arr.push('RECESS');
+    return arr;
+  }).flat()]];
+  const body=days.map((day,d)=>{
+    const row=[day];
+    for(let p=0;p<periods;p++){
+      const slot=currentViewMode==='class'?state.timetable.classes[currentViewId][d][p]:state.timetable.teachers[currentViewId][d][p];
+      if(!slot) row.push('EMPTY');
+      else if(currentViewMode==='class'){
+        if(slot.free) row.push('FREE');
+        else {
+          const subj=state.subjects.find(s=>s.id===slot.subjectId);
+          const t=slot.teacherId?state.teachers.find(x=>x.id===slot.teacherId):null;
+          row.push(`${subj?.code||''}\n${t?t.name:'(No Teacher)'}`);
+        }
+      } else {
+        if(!slot.classId) row.push('—');
+        else {
+          const c=state.classes.find(c=>c.id===slot.classId);
+          const subj=state.subjects.find(s=>s.id===slot.subjectId);
+          row.push(`${c?.name||''}${c?.section?'-'+c.section:''}${c?.course?' ('+c.course+')':''}\n${subj?.code||''}`);
+        }
+      }
+      if(p+1 === state.setup.breakAfter && p+1 < periods) {
+        if(d === Math.floor(days.length/2)) row.push('R E C E S S');
+        else row.push('');
+      }
+    }
+    return row;
+  });
+  const startY=addPdfHeader(doc, title, subtitle, loadLine);
+  doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:8,cellPadding:6,lineWidth:0.5,lineColor:[100,100,100]}, headStyles:{fillColor:[99,102,241],textColor:255,fontSize:9}, columnStyles:{0:{fillColor:[241,245,249],textColor:[15,23,42],fontStyle:'bold',cellWidth:50}}});
+  addPdfSignature(doc);
+  doc.save(`${title.replace(/[^a-z0-9]/gi,'_')}.pdf`);
+  toast('PDF downloaded!');
+}
+
+function downloadAllClassPDF(){
+  if(!state.timetable) return;
+  const { jsPDF }=window.jspdf;
+  const doc=new jsPDF('landscape','pt','a4');
+  state.classes.forEach((c,idx)=>{
+    if(idx>0) doc.addPage();
+    const title=`${c.name} ${c.section?'-'+c.section:''} ${c.course?'('+c.course+')':''}`;
+    const startY=addPdfHeader(doc, title, 'Class Timetable', null);
+    const days=state.setup.workingDays, periods=state.setup.periodsPerDay;
+    const head=[['Day', ...Array.from({length:periods},(_,i)=>{
+      let arr = [`P${i+1}`];
+      if (i+1 === state.setup.breakAfter && i+1 < periods) arr.push('RECESS');
+      return arr;
+    }).flat()]];
+    const body=days.map((day,d)=>{ 
+      const row=[day]; 
+      for(let p=0;p<periods;p++){ 
+        const slot=state.timetable.classes[c.id][d][p]; 
+        if(!slot) row.push('EMPTY'); 
+        else if(slot.free) row.push('FREE'); 
+        else { 
+          const subj=state.subjects.find(s=>s.id===slot.subjectId); 
+          const t=slot.teacherId?state.teachers.find(x=>x.id===slot.teacherId):null; 
+          row.push(`${subj?.code||''}\n${t?t.name:'(No Teacher)'}`); 
+        }
+        if(p+1 === state.setup.breakAfter && p+1 < periods) {
+          if(d === Math.floor(days.length/2)) row.push('R E C E S S');
+          else row.push('');
+        }
+      } 
+      return row; 
+    });
+    doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:7,cellPadding:4}, headStyles:{fillColor:[99,102,241],textColor:255}, columnStyles:{0:{cellWidth:40,fontStyle:'bold'}}});
+    addPdfSignature(doc);
+  });
+  doc.save('All_Class_Timetables.pdf');
+  toast('All Classes PDF downloaded!');
+}
+
+function downloadAllTeacherPDF(){
+  if(!state.timetable) return;
+  const { jsPDF }=window.jspdf;
+  const doc=new jsPDF('landscape','pt','a4');
+  state.teachers.forEach((t,idx)=>{
+    if(idx>0) doc.addPage();
+    const startY=addPdfHeader(doc, 'Teacher Timetable', t.name, `Load: ${state.timetable.teacherWeeklyCount[t.id]||0} / ${t.maxPerWeek} periods per week · ID: ${t.id}`);
+    const days=state.setup.workingDays, periods=state.setup.periodsPerDay;
+    const head=[['Day', ...Array.from({length:periods},(_,i)=>{
+      let arr = [`P${i+1}`];
+      if (i+1 === state.setup.breakAfter && i+1 < periods) arr.push('RECESS');
+      return arr;
+    }).flat()]];
+    const body=days.map((day,d)=>{ 
+      const row=[day]; 
+      for(let p=0;p<periods;p++){ 
+        const slot=state.timetable.teachers[t.id][d][p]; 
+        if(!slot) row.push('—'); 
+        else { 
+          const c=state.classes.find(c=>c.id===slot.classId); 
+          const subj=state.subjects.find(s=>s.id===slot.subjectId); 
+          row.push(`${c?.name||''}${c?.section?'-'+c.section:''}${c?.course?' ('+c.course+')':''}\n${subj?.code||''}`); 
+        }
+        if(p+1 === state.setup.breakAfter && p+1 < periods) {
+          if(d === Math.floor(days.length/2)) row.push('R E C E S S');
+          else row.push('');
+        }
+      } 
+      return row; 
+    });
+    doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:7,cellPadding:4}, headStyles:{fillColor:[139,92,246],textColor:255}, columnStyles:{0:{cellWidth:40,fontStyle:'bold'}}});
+    addPdfSignature(doc);
+  });
+  doc.save('All_Teacher_Timetables.pdf');
+  toast('All Teachers PDF downloaded!');
+}
+
+function downloadCurrentExcel(){
+  if(!state.timetable) return;
+  const wb=XLSX.utils.book_new();
+  const days=state.setup.workingDays, periods=state.setup.periodsPerDay;
+  let ws_data=[['Day', ...Array.from({length:periods},(_,i)=>{
+    let arr = [`P${i+1}`];
+    if (i+1 === state.setup.breakAfter && i+1 < periods) arr.push('RECESS');
+    return arr;
+  }).flat()]];
+  days.forEach((day,d)=>{
+    let row=[day];
+    for(let p=0;p<periods;p++){
+      const slot=currentViewMode==='class'?state.timetable.classes[currentViewId][d][p]:state.timetable.teachers[currentViewId][d][p];
+      if(!slot||slot.free) row.push('FREE');
+      else if(currentViewMode==='class'){
+        const subj=state.subjects.find(s=>s.id===slot.subjectId);
+        const t=state.teachers.find(x=>x.id===slot.teacherId);
+        row.push(`${subj?.code||''} (${t?.name||''})`);
+      } else {
+        const c=state.classes.find(c=>c.id===slot.classId);
+        const subj=state.subjects.find(s=>s.id===slot.subjectId);
+        row.push(`${c?.name||''}-${c?.section||''} ${subj?.code||''}`);
+      }
+      if(p+1 === state.setup.breakAfter && p+1 < periods) {
+        if(d === Math.floor(days.length/2)) row.push('R E C E S S');
+        else row.push('');
+      }
+    }
+    ws_data.push(row);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(ws_data);
+  XLSX.utils.book_append_sheet(wb, ws, 'Timetable');
+  XLSX.writeFile(wb, `${currentViewMode}_${currentViewId}.xlsx`);
+  toast('Excel downloaded!');
+}
+
+function downloadAllClassExcel(){
+  if(!state.timetable) return;
+  const wb=XLSX.utils.book_new();
+  state.classes.forEach(c=>{
+    let ws_data=[['Day', ...Array.from({length:state.setup.periodsPerDay},(_,i)=>{
+      let arr = [`P${i+1}`];
+      if (i+1 === state.setup.breakAfter && i+1 < state.setup.periodsPerDay) arr.push('RECESS');
+      return arr;
+    }).flat()]];
+    state.setup.workingDays.forEach((day,d)=>{
+      let row=[day];
+      for(let p=0;p<state.setup.periodsPerDay;p++){
+        const slot=state.timetable.classes[c.id][d][p];
+        if(!slot||slot.free) row.push('FREE');
+        else { const subj=state.subjects.find(s=>s.id===slot.subjectId); const t=state.teachers.find(x=>x.id===slot.teacherId); row.push(`${subj?.code||''} (${t?.name||''})`); }
+        if(p+1 === state.setup.breakAfter && p+1 < state.setup.periodsPerDay) {
+          if(d === Math.floor(state.setup.workingDays.length/2)) row.push('R E C E S S');
+          else row.push('');
+        }
+      }
+      ws_data.push(row);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, `${c.name}${c.section?'-'+c.section:''}`.substring(0,31));
+  });
+  XLSX.writeFile(wb, 'All_Class_Timetables.xlsx');
+  toast('All Classes Excel downloaded!');
+}
+
+function downloadAllTeacherExcel(){
+  if(!state.timetable) return;
+  const wb=XLSX.utils.book_new();
+  state.teachers.forEach(t=>{
+    let ws_data=[['Day', ...Array.from({length:state.setup.periodsPerDay},(_,i)=>{
+      let arr = [`P${i+1}`];
+      if (i+1 === state.setup.breakAfter && i+1 < state.setup.periodsPerDay) arr.push('RECESS');
+      return arr;
+    }).flat()]];
+    state.setup.workingDays.forEach((day,d)=>{
+      let row=[day];
+      for(let p=0;p<state.setup.periodsPerDay;p++){
+        const slot=state.timetable.teachers[t.id][d][p];
+        if(!slot||slot.free) row.push('—');
+        else { const c=state.classes.find(c=>c.id===slot.classId); const subj=state.subjects.find(s=>s.id===slot.subjectId); row.push(`${c?.name||''}-${c?.section||''} ${subj?.code||''}`); }
+        if(p+1 === state.setup.breakAfter && p+1 < state.setup.periodsPerDay) {
+          if(d === Math.floor(state.setup.workingDays.length/2)) row.push('R E C E S S');
+          else row.push('');
+        }
+      }
+      ws_data.push(row);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, `${t.name}`.substring(0,31));
+  });
+  XLSX.writeFile(wb, 'All_Teacher_Timetables.xlsx');
+  toast('All Teachers Excel downloaded!');
+}
+
+function downloadCurrentCSV(){
+  if(!state.timetable) return;
+  const days=state.setup.workingDays, periods=state.setup.periodsPerDay;
+  let csv=`Day,${Array.from({length:periods},(_,i)=>`P${i+1}`).join(',')}\n`;
+  for(let d=0; d<days.length; d++){
+    let row=days[d];
+    for(let p=0; p<periods; p++){
+      const slot=currentViewMode==='class'?state.timetable.classes[currentViewId][d][p]:state.timetable.teachers[currentViewId][d][p];
+      let cell='';
+      if(!slot||slot.free) cell='FREE';
+      else if(currentViewMode==='class'){
+        const subj=state.subjects.find(s=>s.id===slot.subjectId);
+        const t=state.teachers.find(x=>x.id===slot.teacherId);
+        cell=`${subj?.code||''} (${t?.name||''})`;
+      } else {
+        const c=state.classes.find(c=>c.id===slot.classId);
+        const subj=state.subjects.find(s=>s.id===slot.subjectId);
+        cell=`${c?.name||''}-${c?.section||''} ${subj?.code||''}`;
+      }
+      row+=','+cell.replace(/,/g,';');
+    }
+    csv+=row+'\n';
+  }
+  downloadFile(csv, `${currentViewMode}_${currentViewId}.csv`);
+}
+
+function downloadMasterCSV(){
+  if(!state.timetable) return;
+  const days=state.setup.workingDays, periods=state.setup.periodsPerDay;
+  let csv='Class,Section,Course,Day,Period,SubjectCode,TeacherID\n';
+  state.classes.forEach(c=>{
+    for(let d=0; d<days.length; d++){
+      for(let p=0; p<periods; p++){
+        const slot=state.timetable.classes[c.id][d][p];
+        if(!slot||slot.free) csv+=`${c.name},${c.section||''},${c.course||''},${days[d]},P${p+1},FREE,,\n`;
+        else { const subj=state.subjects.find(s=>s.id===slot.subjectId); csv+=`${c.name},${c.section||''},${c.course||''},${days[d]},P${p+1},${subj?.code||''},${slot.teacherId||''}\n`; }
+      }
+    }
+  });
+  downloadFile(csv,'Master_Timetable.csv');
+}
+
+function downloadFile(content, filename){
+  const blob=new Blob([content],{type:'application/json;charset=utf-8;'});
+  const link=document.createElement('a');
+  link.href=URL.createObjectURL(blob);
+  link.download=filename;
+  link.click();
+}
+
+function exportData(){
+  downloadFile(JSON.stringify(state,null,2), `timetable_backup_${Date.now()}.json`);
+}
+function importData(event){
+  const file=event.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{ try{ state={...state, ...JSON.parse(e.target.result)}; save(); location.reload(); }catch(err){ toast('Invalid file','error'); } };
+  reader.readAsText(file);
+}
+
+function loadSampleData(){
+  if(!confirm('Load sample data? This will replace current data.')) return;
+  state.teachers=[]; state.subjects=[]; state.classes=[]; state.timetable=null;
+  state.setup={ schoolName:'Greenwood Public School', academicYear:'2024-25', periodsPerDay:8, periodDuration:45, breakAfter:4, breakDuration:20, workingDays:['Mon','Tue','Wed','Thu','Fri','Sat'], schoolLogo:null };
+  
+  const subjData=[
+    ['ENG','English','language',[],false],['HIN','Hindi','language',[],false],['MAT','Mathematics','theory',[],true],
+    ['SCI','Science','theory',[],true],['SST','Social Science','theory',[],false],['PHY','Physics','theory',[],true],
+    ['CHM','Chemistry','theory',[],true],['BIO','Biology','theory',[],true],['ACC','Accountancy','theory',[],true],
+    ['BST','Business Studies','theory',[],false],['ECO','Economics','theory',[],false],['HIS','History','theory',[],false],
+    ['COM','Computer Science','practical',[]],['PE','Physical Education','activity',[]],['INF','Informatics Practices','practical',[]]
+  ];
+  subjData.forEach(([code,name,type,alts,tough])=>state.subjects.push({id:'sub_'+code,code,name,type,alternativeIds:alts,tough}));
+  state.subjects.find(s=>s.id==='sub_COM').alternativeIds=['sub_PE','sub_INF'];
+  state.subjects.find(s=>s.id==='sub_PE').alternativeIds=['sub_COM','sub_INF'];
+  state.subjects.find(s=>s.id==='sub_INF').alternativeIds=['sub_COM','sub_PE'];
+  
+  const tData=[
+    ['T001','Mr. Rajesh Kumar','PGT',['ENG'],['cls_11a','cls_11b','cls_12a'],6,30,[]],
+    ['T002','Mrs. Sunita Sharma','TGT',['HIN'],['cls_6a','cls_8a','cls_10a'],6,30,[]],
+    ['T003','Mr. Amit Verma','PGT',['MAT'],['cls_10a','cls_11b','cls_12a'],6,30,[]],
+    ['T004','Mrs. Priya Singh','PGT',['PHY'],['cls_11a','cls_11b','cls_12a'],6,30,[]],
+    ['T005','Mr. Sanjay Gupta','TGT',['SST'],['cls_6a','cls_8a','cls_10a'],6,30,[]],
+    ['T006','Mrs. Neha Jain','PGT',['CHM'],['cls_11a','cls_11b','cls_12a'],6,30,[]],
+    ['T007','Mr. Vikram Patel','PGT',['BIO'],['cls_11a','cls_12a'],6,30,[]],
+    ['T008','Mr. Rakesh Mishra','PGT',['ACC','BST'],['cls_12a'],6,30,[]],
+    ['T009','Mrs. Anjali Rao','PGT',['ECO'],['cls_12a'],6,30,[]],
+    ['T010','Mr. Karan Mehta','PGT',['COM','INF'],['cls_11a','cls_11b','cls_12a'],6,30,[]],
+    ['T011','Mr. Deepak Yadav','TGT',['PE'],['cls_6a','cls_8a','cls_10a','cls_11a','cls_11b','cls_12a'],6,30,[]],
+    ['T012','Mrs. Kavita Nair','PRT',['SCI'],['cls_6a'],6,30,[]]
+  ];
+  tData.forEach(([id,name,lvl,subs,cls,md,mw,un])=>state.teachers.push({id,name,level:lvl,subjects:subs.map(c=>'sub_'+c),eligibleClasses:cls,maxPerDay:md,maxPerWeek:mw,unavailableDays:un}));
+  
+  state.classes=[
+    {id:'cls_6a',name:'Class 6',section:'A',course:'',subjects:[
+      {subjectId:'sub_ENG',periodsPerWeek:6,teacherIds:['T001']},{subjectId:'sub_HIN',periodsPerWeek:5,teacherIds:['T002']},
+      {subjectId:'sub_MAT',periodsPerWeek:6,teacherIds:['T003']},{subjectId:'sub_SCI',periodsPerWeek:6,teacherIds:['T012']},
+      {subjectId:'sub_SST',periodsPerWeek:5,teacherIds:['T005']},{subjectId:'sub_COM',periodsPerWeek:2,teacherIds:['T010']},
+      {subjectId:'sub_PE',periodsPerWeek:2,teacherIds:['T011']}
+    ]},
+    {id:'cls_11a',name:'Class 11',section:'',course:'Medical',subjects:[
+      {subjectId:'sub_ENG',periodsPerWeek:5,teacherIds:['T001']},{subjectId:'sub_PHY',periodsPerWeek:7,teacherIds:['T004']},
+      {subjectId:'sub_CHM',periodsPerWeek:7,teacherIds:['T006']},{subjectId:'sub_BIO',periodsPerWeek:7,teacherIds:['T007']},
+      {subjectId:'sub_COM',periodsPerWeek:4,teacherIds:['T010']}
+    ]},
+    {id:'cls_11b',name:'Class 11',section:'',course:'Non-Medical',subjects:[
+      {subjectId:'sub_ENG',periodsPerWeek:5,teacherIds:['T001']},{subjectId:'sub_PHY',periodsPerWeek:7,teacherIds:['T004']},
+      {subjectId:'sub_CHM',periodsPerWeek:7,teacherIds:['T006']},{subjectId:'sub_MAT',periodsPerWeek:7,teacherIds:['T003']},
+      {subjectId:'sub_PE',periodsPerWeek:4,teacherIds:['T011']}
+    ]},
+    {id:'cls_12a',name:'Class 12',section:'',course:'Commerce',subjects:[
+      {subjectId:'sub_ENG',periodsPerWeek:5,teacherIds:['T001']},{subjectId:'sub_ACC',periodsPerWeek:8,teacherIds:['T008']},
+      {subjectId:'sub_BST',periodsPerWeek:7,teacherIds:['T008']},{subjectId:'sub_ECO',periodsPerWeek:7,teacherIds:['T009']},
+      {subjectId:'sub_INF',periodsPerWeek:4,teacherIds:['T010']}
+    ]},
+    {id:'cls_12b',name:'Class 12',section:'',course:'Arts',subjects:[
+      {subjectId:'sub_ENG',periodsPerWeek:5,teacherIds:['T001']},{subjectId:'sub_HIS',periodsPerWeek:8,teacherIds:['T005']},
+      {subjectId:'sub_ECO',periodsPerWeek:6,teacherIds:['T009']},{subjectId:'sub_PE',periodsPerWeek:4,teacherIds:['T011']},
+      {subjectId:'sub_HIN',periodsPerWeek:5,teacherIds:['T002']}
+    ]}
+  ];
+  
+  save(); loadSetupUI(); renderTeachers(); renderSubjects(); renderClasses(); renderGenerateStats();
+  toast('Sample data loaded!');
+}
+
+renderTeachers(); renderSubjects(); renderClasses(); renderGenerateStats();

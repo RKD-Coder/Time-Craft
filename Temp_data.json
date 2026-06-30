@@ -1,0 +1,3669 @@
+{
+  "setup": {
+    "schoolName": "Greenwood Public School",
+    "academicYear": "2024-25",
+    "periodsPerDay": 8,
+    "periodDuration": 45,
+    "breakAfter": 4,
+    "breakDuration": 20,
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ]
+  },
+  "teachers": [
+    {
+      "id": "T001",
+      "name": "Mr. Rajesh Kumar",
+      "subjects": [
+        "sub_ENG",
+        "sub_GK"
+      ],
+      "maxPerDay": 7,
+      "maxPerWeek": 35,
+      "unavailableDays": []
+    },
+    {
+      "id": "T002",
+      "name": "Mrs. Sunita Sharma",
+      "subjects": [
+        "sub_HIN",
+        "sub_ART"
+      ],
+      "maxPerDay": 7,
+      "maxPerWeek": 35,
+      "unavailableDays": []
+    },
+    {
+      "id": "T003",
+      "name": "Mr. Amit Verma",
+      "subjects": [
+        "sub_MAT"
+      ],
+      "maxPerDay": 8,
+      "maxPerWeek": 40,
+      "unavailableDays": []
+    },
+    {
+      "id": "T004",
+      "name": "Mrs. Priya Singh",
+      "subjects": [
+        "sub_SCI",
+        "sub_PHY"
+      ],
+      "maxPerDay": 7,
+      "maxPerWeek": 35,
+      "unavailableDays": []
+    },
+    {
+      "id": "T005",
+      "name": "Mr. Sanjay Gupta",
+      "subjects": [
+        "sub_SST",
+        "sub_HIS",
+        "sub_POL"
+      ],
+      "maxPerDay": 7,
+      "maxPerWeek": 35,
+      "unavailableDays": []
+    },
+    {
+      "id": "T006",
+      "name": "Mrs. Neha Jain",
+      "subjects": [
+        "sub_CHM"
+      ],
+      "maxPerDay": 7,
+      "maxPerWeek": 35,
+      "unavailableDays": []
+    },
+    {
+      "id": "T007",
+      "name": "Mr. Vikram Patel",
+      "subjects": [
+        "sub_BIO"
+      ],
+      "maxPerDay": 7,
+      "maxPerWeek": 35,
+      "unavailableDays": []
+    },
+    {
+      "id": "T008",
+      "name": "Mr. Rakesh Mishra",
+      "subjects": [
+        "sub_ACC",
+        "sub_BST"
+      ],
+      "maxPerDay": 7,
+      "maxPerWeek": 35,
+      "unavailableDays": []
+    },
+    {
+      "id": "T009",
+      "name": "Mrs. Anjali Rao",
+      "subjects": [
+        "sub_ECO",
+        "sub_SOC"
+      ],
+      "maxPerDay": 7,
+      "maxPerWeek": 35,
+      "unavailableDays": []
+    },
+    {
+      "id": "T010",
+      "name": "Mr. Karan Mehta",
+      "subjects": [
+        "sub_COM",
+        "sub_INF"
+      ],
+      "maxPerDay": 7,
+      "maxPerWeek": 35,
+      "unavailableDays": []
+    },
+    {
+      "id": "T011",
+      "name": "Mr. Deepak Yadav",
+      "subjects": [
+        "sub_PE"
+      ],
+      "maxPerDay": 7,
+      "maxPerWeek": 35,
+      "unavailableDays": []
+    },
+    {
+      "id": "T012",
+      "name": "Mrs. Kavita Nair",
+      "subjects": [
+        "sub_MUS",
+        "sub_ART"
+      ],
+      "maxPerDay": 6,
+      "maxPerWeek": 30,
+      "unavailableDays": []
+    }
+  ],
+  "subjects": [
+    {
+      "id": "sub_ENG",
+      "code": "ENG",
+      "name": "English",
+      "type": "language",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_HIN",
+      "code": "HIN",
+      "name": "Hindi",
+      "type": "language",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_MAT",
+      "code": "MAT",
+      "name": "Mathematics",
+      "type": "theory",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_SCI",
+      "code": "SCI",
+      "name": "Science",
+      "type": "theory",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_SST",
+      "code": "SST",
+      "name": "Social Science",
+      "type": "theory",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_PHY",
+      "code": "PHY",
+      "name": "Physics",
+      "type": "theory",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_CHM",
+      "code": "CHM",
+      "name": "Chemistry",
+      "type": "theory",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_BIO",
+      "code": "BIO",
+      "name": "Biology",
+      "type": "theory",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_ACC",
+      "code": "ACC",
+      "name": "Accountancy",
+      "type": "theory",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_BST",
+      "code": "BST",
+      "name": "Business Studies",
+      "type": "theory",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_ECO",
+      "code": "ECO",
+      "name": "Economics",
+      "type": "theory",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_HIS",
+      "code": "HIS",
+      "name": "History",
+      "type": "theory",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_POL",
+      "code": "POL",
+      "name": "Political Science",
+      "type": "theory",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_SOC",
+      "code": "SOC",
+      "name": "Sociology",
+      "type": "theory",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_COM",
+      "code": "COM",
+      "name": "Computer Science",
+      "type": "practical",
+      "electiveGroup": "ELECTIVE-6"
+    },
+    {
+      "id": "sub_PE",
+      "code": "PE",
+      "name": "Physical Education",
+      "type": "activity",
+      "electiveGroup": "ELECTIVE-6"
+    },
+    {
+      "id": "sub_INF",
+      "code": "INF",
+      "name": "Informatics Practices",
+      "type": "practical",
+      "electiveGroup": "ELECTIVE-6"
+    },
+    {
+      "id": "sub_ART",
+      "code": "ART",
+      "name": "Art",
+      "type": "activity",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_MUS",
+      "code": "MUS",
+      "name": "Music",
+      "type": "activity",
+      "electiveGroup": ""
+    },
+    {
+      "id": "sub_GK",
+      "code": "GK",
+      "name": "General Knowledge",
+      "type": "theory",
+      "electiveGroup": ""
+    }
+  ],
+  "classes": [
+    {
+      "id": "cls_6a",
+      "name": "Class 6",
+      "section": "A",
+      "course": "",
+      "subjects": [
+        {
+          "subjectId": "sub_ENG",
+          "periodsPerWeek": 6,
+          "teacherIds": [
+            "T001"
+          ]
+        },
+        {
+          "subjectId": "sub_HIN",
+          "periodsPerWeek": 5,
+          "teacherIds": [
+            "T002"
+          ]
+        },
+        {
+          "subjectId": "sub_MAT",
+          "periodsPerWeek": 6,
+          "teacherIds": [
+            "T003"
+          ]
+        },
+        {
+          "subjectId": "sub_SCI",
+          "periodsPerWeek": 6,
+          "teacherIds": [
+            "T004"
+          ]
+        },
+        {
+          "subjectId": "sub_SST",
+          "periodsPerWeek": 5,
+          "teacherIds": [
+            "T005"
+          ]
+        },
+        {
+          "subjectId": "sub_COM",
+          "periodsPerWeek": 2,
+          "teacherIds": [
+            "T010"
+          ]
+        },
+        {
+          "subjectId": "sub_GK",
+          "periodsPerWeek": 2,
+          "teacherIds": [
+            "T001"
+          ]
+        },
+        {
+          "subjectId": "sub_ART",
+          "periodsPerWeek": 1,
+          "teacherIds": [
+            "T012"
+          ]
+        },
+        {
+          "subjectId": "sub_MUS",
+          "periodsPerWeek": 1,
+          "teacherIds": [
+            "T012"
+          ]
+        },
+        {
+          "subjectId": "sub_PE",
+          "periodsPerWeek": 2,
+          "teacherIds": [
+            "T011"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cls_8a",
+      "name": "Class 8",
+      "section": "A",
+      "course": "",
+      "subjects": [
+        {
+          "subjectId": "sub_ENG",
+          "periodsPerWeek": 6,
+          "teacherIds": [
+            "T001"
+          ]
+        },
+        {
+          "subjectId": "sub_HIN",
+          "periodsPerWeek": 5,
+          "teacherIds": [
+            "T002"
+          ]
+        },
+        {
+          "subjectId": "sub_MAT",
+          "periodsPerWeek": 7,
+          "teacherIds": [
+            "T003"
+          ]
+        },
+        {
+          "subjectId": "sub_SCI",
+          "periodsPerWeek": 7,
+          "teacherIds": [
+            "T004"
+          ]
+        },
+        {
+          "subjectId": "sub_SST",
+          "periodsPerWeek": 6,
+          "teacherIds": [
+            "T005"
+          ]
+        },
+        {
+          "subjectId": "sub_COM",
+          "periodsPerWeek": 2,
+          "teacherIds": [
+            "T010"
+          ]
+        },
+        {
+          "subjectId": "sub_GK",
+          "periodsPerWeek": 1,
+          "teacherIds": [
+            "T001"
+          ]
+        },
+        {
+          "subjectId": "sub_PE",
+          "periodsPerWeek": 2,
+          "teacherIds": [
+            "T011"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cls_10a",
+      "name": "Class 10",
+      "section": "A",
+      "course": "",
+      "subjects": [
+        {
+          "subjectId": "sub_ENG",
+          "periodsPerWeek": 7,
+          "teacherIds": [
+            "T001"
+          ]
+        },
+        {
+          "subjectId": "sub_HIN",
+          "periodsPerWeek": 6,
+          "teacherIds": [
+            "T002"
+          ]
+        },
+        {
+          "subjectId": "sub_MAT",
+          "periodsPerWeek": 8,
+          "teacherIds": [
+            "T003"
+          ]
+        },
+        {
+          "subjectId": "sub_SCI",
+          "periodsPerWeek": 8,
+          "teacherIds": [
+            "T004"
+          ]
+        },
+        {
+          "subjectId": "sub_SST",
+          "periodsPerWeek": 7,
+          "teacherIds": [
+            "T005"
+          ]
+        },
+        {
+          "subjectId": "sub_COM",
+          "periodsPerWeek": 2,
+          "teacherIds": [
+            "T010"
+          ]
+        },
+        {
+          "subjectId": "sub_PE",
+          "periodsPerWeek": 2,
+          "teacherIds": [
+            "T011"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cls_11a",
+      "name": "Class 11",
+      "section": "A",
+      "course": "Medical",
+      "subjects": [
+        {
+          "subjectId": "sub_ENG",
+          "periodsPerWeek": 5,
+          "teacherIds": [
+            "T001"
+          ]
+        },
+        {
+          "subjectId": "sub_PHY",
+          "periodsPerWeek": 7,
+          "teacherIds": [
+            "T004"
+          ]
+        },
+        {
+          "subjectId": "sub_CHM",
+          "periodsPerWeek": 7,
+          "teacherIds": [
+            "T006"
+          ]
+        },
+        {
+          "subjectId": "sub_BIO",
+          "periodsPerWeek": 7,
+          "teacherIds": [
+            "T007"
+          ]
+        },
+        {
+          "subjectId": "sub_COM",
+          "periodsPerWeek": 4,
+          "teacherIds": [
+            "T010"
+          ]
+        },
+        {
+          "subjectId": "sub_PE",
+          "periodsPerWeek": 4,
+          "teacherIds": [
+            "T011"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cls_11b",
+      "name": "Class 11",
+      "section": "B",
+      "course": "Non-Medical",
+      "subjects": [
+        {
+          "subjectId": "sub_ENG",
+          "periodsPerWeek": 5,
+          "teacherIds": [
+            "T001"
+          ]
+        },
+        {
+          "subjectId": "sub_PHY",
+          "periodsPerWeek": 7,
+          "teacherIds": [
+            "T004"
+          ]
+        },
+        {
+          "subjectId": "sub_CHM",
+          "periodsPerWeek": 7,
+          "teacherIds": [
+            "T006"
+          ]
+        },
+        {
+          "subjectId": "sub_MAT",
+          "periodsPerWeek": 7,
+          "teacherIds": [
+            "T003"
+          ]
+        },
+        {
+          "subjectId": "sub_COM",
+          "periodsPerWeek": 4,
+          "teacherIds": [
+            "T010"
+          ]
+        },
+        {
+          "subjectId": "sub_PE",
+          "periodsPerWeek": 4,
+          "teacherIds": [
+            "T011"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cls_12a",
+      "name": "Class 12",
+      "section": "A",
+      "course": "Commerce",
+      "subjects": [
+        {
+          "subjectId": "sub_ENG",
+          "periodsPerWeek": 5,
+          "teacherIds": [
+            "T001"
+          ]
+        },
+        {
+          "subjectId": "sub_ACC",
+          "periodsPerWeek": 8,
+          "teacherIds": [
+            "T008"
+          ]
+        },
+        {
+          "subjectId": "sub_BST",
+          "periodsPerWeek": 7,
+          "teacherIds": [
+            "T008"
+          ]
+        },
+        {
+          "subjectId": "sub_ECO",
+          "periodsPerWeek": 7,
+          "teacherIds": [
+            "T009"
+          ]
+        },
+        {
+          "subjectId": "sub_MAT",
+          "periodsPerWeek": 5,
+          "teacherIds": [
+            "T003"
+          ]
+        },
+        {
+          "subjectId": "sub_COM",
+          "periodsPerWeek": 4,
+          "teacherIds": [
+            "T010"
+          ]
+        },
+        {
+          "subjectId": "sub_PE",
+          "periodsPerWeek": 2,
+          "teacherIds": [
+            "T011"
+          ]
+        }
+      ]
+    }
+  ],
+  "timetable": {
+    "classes": {
+      "cls_6a": [
+        [
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_ART",
+            "teacherId": "T012"
+          },
+          {
+            "subjectId": "sub_MUS",
+            "teacherId": "T012"
+          },
+          {
+            "subjectId": "sub_GK",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          }
+        ]
+      ],
+      "cls_8a": [
+        [
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          }
+        ]
+      ],
+      "cls_10a": [
+        [
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_SCI",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_SST",
+            "teacherId": "T005"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          },
+          {
+            "subjectId": "sub_HIN",
+            "teacherId": "T002"
+          }
+        ]
+      ],
+      "cls_11a": [
+        [
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_BIO",
+            "teacherId": "T007"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_BIO",
+            "teacherId": "T007"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_BIO",
+            "teacherId": "T007"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_BIO",
+            "teacherId": "T007"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_BIO",
+            "teacherId": "T007"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_BIO",
+            "teacherId": "T007"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_BIO",
+            "teacherId": "T007"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          }
+        ]
+      ],
+      "cls_11b": [
+        [
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_CHM",
+            "teacherId": "T006"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_PHY",
+            "teacherId": "T004"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          }
+        ]
+      ],
+      "cls_12a": [
+        [
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_BST",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ECO",
+            "teacherId": "T009"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_BST",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ECO",
+            "teacherId": "T009"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_BST",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ECO",
+            "teacherId": "T009"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_BST",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ECO",
+            "teacherId": "T009"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_BST",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ECO",
+            "teacherId": "T009"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_BST",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ECO",
+            "teacherId": "T009"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_ENG",
+            "teacherId": "T001"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_BST",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ECO",
+            "teacherId": "T009"
+          },
+          {
+            "subjectId": "sub_MAT",
+            "teacherId": "T003"
+          },
+          {
+            "subjectId": "sub_COM",
+            "teacherId": "T010"
+          },
+          {
+            "subjectId": "sub_PE",
+            "teacherId": "T011"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          }
+        ],
+        [
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          },
+          {
+            "subjectId": "sub_ACC",
+            "teacherId": "T008"
+          }
+        ]
+      ]
+    },
+    "teachers": {
+      "T001": [
+        [
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_ENG"
+          }
+        ],
+        [
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_ENG"
+          },
+          null
+        ],
+        [
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_ENG"
+          }
+        ],
+        [
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_GK"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ENG"
+          }
+        ],
+        [
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_ENG"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_ENG"
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "T002": [
+        [
+          null,
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_HIN"
+          },
+          null,
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_HIN"
+          },
+          null,
+          null,
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_HIN"
+          }
+        ],
+        [
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_HIN"
+          },
+          null,
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_HIN"
+          },
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_HIN"
+          },
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_HIN"
+          }
+        ],
+        [
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_HIN"
+          },
+          null,
+          null,
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          null,
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_HIN"
+          },
+          null
+        ],
+        [
+          null,
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          }
+        ],
+        [
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_HIN"
+          }
+        ]
+      ],
+      "T003": [
+        [
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_MAT"
+          }
+        ],
+        [
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_MAT"
+          }
+        ],
+        [
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_MAT"
+          },
+          null,
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_MAT"
+          }
+        ],
+        [
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          null,
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_MAT"
+          },
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_MAT"
+          }
+        ],
+        [
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          }
+        ],
+        [
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_MAT"
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "T004": [
+        [
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_PHY"
+          }
+        ],
+        [
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SCI"
+          }
+        ],
+        [
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_PHY"
+          }
+        ],
+        [
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SCI"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SCI"
+          }
+        ],
+        [
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SCI"
+          },
+          null,
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PHY"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PHY"
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "T005": [
+        [
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SST"
+          },
+          null,
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SST"
+          },
+          null,
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SST"
+          }
+        ],
+        [
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          null,
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SST"
+          },
+          null,
+          null,
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SST"
+          }
+        ],
+        [
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SST"
+          },
+          null,
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SST"
+          }
+        ],
+        [
+          null,
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SST"
+          },
+          null,
+          null,
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SST"
+          },
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          }
+        ],
+        [
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_SST"
+          }
+        ]
+      ],
+      "T006": [
+        [
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          null,
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_CHM"
+          },
+          null,
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_CHM"
+          },
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_CHM"
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_CHM"
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_CHM"
+          }
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          }
+        ],
+        [
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_CHM"
+          }
+        ]
+      ],
+      "T007": [
+        [
+          null,
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_BIO"
+          },
+          null,
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_BIO"
+          },
+          null,
+          null
+        ],
+        [
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_BIO"
+          },
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_BIO"
+          },
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_BIO"
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_BIO"
+          },
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_BIO"
+          }
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "T008": [
+        [
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_BST"
+          },
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_BST"
+          },
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          }
+        ],
+        [
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_BST"
+          },
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_BST"
+          },
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_BST"
+          },
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_BST"
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_BST"
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          }
+        ],
+        [
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ACC"
+          }
+        ]
+      ],
+      "T009": [
+        [
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ECO"
+          },
+          null,
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ECO"
+          },
+          null
+        ],
+        [
+          null,
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ECO"
+          },
+          null,
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ECO"
+          }
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ECO"
+          },
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ECO"
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_ECO"
+          },
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "T010": [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_COM"
+          },
+          null,
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_COM"
+          }
+        ],
+        [
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_COM"
+          },
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_COM"
+          }
+        ],
+        [
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_COM"
+          },
+          null,
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_COM"
+          },
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_COM"
+          },
+          null,
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_COM"
+          }
+        ],
+        [
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_COM"
+          },
+          null,
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_COM"
+          }
+        ],
+        [
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_COM"
+          },
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_COM"
+          }
+        ]
+      ],
+      "T011": [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_PE"
+          }
+        ],
+        [
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_PE"
+          },
+          null,
+          null,
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_PE"
+          },
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_PE"
+          },
+          null,
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_PE"
+          },
+          null
+        ],
+        [
+          {
+            "classId": "cls_11b",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_11a",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_10a",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_12a",
+            "subjectId": "sub_PE"
+          },
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_PE"
+          },
+          {
+            "classId": "cls_8a",
+            "subjectId": "sub_PE"
+          }
+        ]
+      ],
+      "T012": [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_ART"
+          },
+          {
+            "classId": "cls_6a",
+            "subjectId": "sub_MUS"
+          },
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ]
+    },
+    "teacherDailyCount": {
+      "T001": {
+        "Mon": 8,
+        "Tue": 7,
+        "Wed": 8,
+        "Thu": 8,
+        "Fri": 4,
+        "Sat": 0
+      },
+      "T002": {
+        "Mon": 4,
+        "Tue": 4,
+        "Wed": 5,
+        "Thu": 4,
+        "Fri": 7,
+        "Sat": 8
+      },
+      "T003": {
+        "Mon": 8,
+        "Tue": 8,
+        "Wed": 7,
+        "Thu": 6,
+        "Fri": 8,
+        "Sat": 3
+      },
+      "T004": {
+        "Mon": 8,
+        "Tue": 8,
+        "Wed": 8,
+        "Thu": 8,
+        "Fri": 3,
+        "Sat": 0
+      },
+      "T005": {
+        "Mon": 6,
+        "Tue": 5,
+        "Wed": 4,
+        "Thu": 2,
+        "Fri": 5,
+        "Sat": 8
+      },
+      "T006": {
+        "Mon": 4,
+        "Tue": 4,
+        "Wed": 2,
+        "Thu": 4,
+        "Fri": 4,
+        "Sat": 8
+      },
+      "T007": {
+        "Mon": 2,
+        "Tue": 2,
+        "Wed": 1,
+        "Thu": 2,
+        "Fri": 0,
+        "Sat": 0
+      },
+      "T008": {
+        "Mon": 6,
+        "Tue": 3,
+        "Wed": 2,
+        "Thu": 2,
+        "Fri": 4,
+        "Sat": 8
+      },
+      "T009": {
+        "Mon": 2,
+        "Tue": 2,
+        "Wed": 1,
+        "Thu": 1,
+        "Fri": 1,
+        "Sat": 0
+      },
+      "T010": {
+        "Mon": 0,
+        "Tue": 3,
+        "Wed": 6,
+        "Thu": 5,
+        "Fri": 6,
+        "Sat": 8
+      },
+      "T011": {
+        "Mon": 0,
+        "Tue": 2,
+        "Wed": 4,
+        "Thu": 4,
+        "Fri": 6,
+        "Sat": 5
+      },
+      "T012": {
+        "Mon": 0,
+        "Tue": 0,
+        "Wed": 0,
+        "Thu": 2,
+        "Fri": 0,
+        "Sat": 0
+      }
+    },
+    "teacherWeeklyCount": {
+      "T001": 35,
+      "T002": 32,
+      "T003": 40,
+      "T004": 35,
+      "T005": 30,
+      "T006": 26,
+      "T007": 7,
+      "T008": 25,
+      "T009": 7,
+      "T010": 28,
+      "T011": 21,
+      "T012": 2
+    },
+    "classSubjectUsed": {
+      "cls_6a": {
+        "sub_ENG": 6,
+        "sub_HIN": 8,
+        "sub_MAT": 6,
+        "sub_SCI": 6,
+        "sub_SST": 15,
+        "sub_COM": 2,
+        "sub_GK": 1,
+        "sub_ART": 1,
+        "sub_MUS": 1,
+        "sub_PE": 2
+      },
+      "cls_8a": {
+        "sub_ENG": 4,
+        "sub_HIN": 8,
+        "sub_MAT": 8,
+        "sub_SCI": 6,
+        "sub_SST": 8,
+        "sub_COM": 7,
+        "sub_GK": 0,
+        "sub_PE": 7
+      },
+      "cls_10a": {
+        "sub_ENG": 7,
+        "sub_HIN": 16,
+        "sub_MAT": 7,
+        "sub_SCI": 7,
+        "sub_SST": 7,
+        "sub_COM": 2,
+        "sub_PE": 2
+      },
+      "cls_11a": {
+        "sub_ENG": 7,
+        "sub_PHY": 7,
+        "sub_CHM": 19,
+        "sub_BIO": 7,
+        "sub_COM": 4,
+        "sub_PE": 4
+      },
+      "cls_11b": {
+        "sub_ENG": 5,
+        "sub_PHY": 9,
+        "sub_CHM": 7,
+        "sub_MAT": 14,
+        "sub_COM": 9,
+        "sub_PE": 4
+      },
+      "cls_12a": {
+        "sub_ENG": 5,
+        "sub_ACC": 18,
+        "sub_BST": 7,
+        "sub_ECO": 7,
+        "sub_MAT": 5,
+        "sub_COM": 4,
+        "sub_PE": 2
+      }
+    }
+  }
+}
