@@ -51,7 +51,7 @@ function closeMobileNav(){
 
 /* ── Confirm Reset ──────────────────────────────────────── */
 function confirmReset(){
-  if(confirm('Reset all data? This cannot be undone.')){ localStorage.clear(); location.reload(); }
+  customConfirm('This will erase ALL teachers, subjects, classes and timetable data permanently.', () => { localStorage.clear(); location.reload(); }, { type:'danger', title:'Reset All Data', confirmText:'Yes, Reset' });
 }
 
 /* ── Tab Navigation ─────────────────────────────────────── */
@@ -98,6 +98,140 @@ function toggleDownloadMenu(){
     setTimeout(()=>document.addEventListener('click', close), 50);
   }
 }
+
+/* ── Custom Confirm Dialog ──────────────────────────────────
+   Replaces browser confirm() everywhere.
+   type: 'danger' | 'warn' | 'info' | 'primary'
+   confirmText: label for OK button (default 'Confirm')
+───────────────────────────────────────────────────────────── */
+function customConfirm(message, onConfirm, { type='danger', title='Confirm Action', confirmText='Confirm', cancelText='Cancel' } = {}) {
+  const iconMap = { danger:'ri-delete-bin-line', warn:'ri-alert-line', info:'ri-information-line', primary:'ri-question-line' };
+  const btnMap  = { danger:'btn-danger', warn:'btn-warn', info:'btn-primary', primary:'btn-primary' };
+  const overlay = document.createElement('div');
+  overlay.className = 'ca-overlay';
+  overlay.innerHTML = `
+    <div class="ca-box">
+      <div class="ca-icon-wrap ca-icon-${type}">
+        <i class="${iconMap[type]||'ri-question-line'}"></i>
+      </div>
+      <div class="ca-title">${title}</div>
+      <p class="ca-message">${message}</p>
+      <div class="ca-actions">
+        <button class="btn btn-outline ca-cancel">${cancelText}</button>
+        <button class="btn ${btnMap[type]||'btn-primary'} ca-ok">${confirmText}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const remove = () => { overlay.style.opacity='0'; setTimeout(()=>overlay.remove(), 220); };
+  overlay.querySelector('.ca-cancel').addEventListener('click', remove);
+  overlay.querySelector('.ca-ok').addEventListener('click', () => { remove(); onConfirm(); });
+  overlay.addEventListener('click', e => { if(e.target===overlay) remove(); });
+}
+
+/* ── Custom Alert (replaces showInfoModal) ─────────────────── */
+function showInfoModal(title, msg) {
+  $('infoModalTitle').textContent = title;
+  $('infoModalBody').textContent  = msg;
+  $('infoModal').classList.remove('hidden');
+}
+
+/* ── Custom Select ─────────────────────────────────────────────
+   Builds a styled dropdown over every <select> element.
+   Call after any dynamic HTML that contains <select> elements.
+───────────────────────────────────────────────────────────── */
+function initCustomSelects(root = document) {
+  root.querySelectorAll('select:not(.cs-initialized)').forEach(sel => {
+    sel.classList.add('cs-initialized');
+
+    // Wrap
+    const wrap = document.createElement('div');
+    wrap.className = 'cs-wrap';
+    sel.parentNode.insertBefore(wrap, sel);
+    wrap.appendChild(sel);
+
+    // Display bar
+    const display = document.createElement('div');
+    display.className = 'cs-display';
+    display.innerHTML = '<span class="cs-value"></span><i class="ri-arrow-down-s-line cs-arrow"></i>';
+    wrap.appendChild(display);
+
+    // Dropdown list
+    const dropdown = document.createElement('div');
+    dropdown.className = 'cs-dropdown';
+    wrap.appendChild(dropdown);
+
+    function buildOptions() {
+      dropdown.innerHTML = '';
+      [...sel.options].forEach((opt, i) => {
+        const item = document.createElement('div');
+        item.className = 'cs-option' + (opt.selected ? ' selected' : '') + (opt.disabled ? ' disabled' : '');
+        item.textContent = opt.text;
+        item.dataset.value = opt.value;
+        item.dataset.index = i;
+        if (!opt.disabled) {
+          item.addEventListener('click', e => {
+            e.stopPropagation();
+            sel.selectedIndex = i;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+            syncDisplay();
+            closeDropdown();
+          });
+        }
+        dropdown.appendChild(item);
+      });
+    }
+
+    function syncDisplay() {
+      const opt = sel.options[sel.selectedIndex];
+      display.querySelector('.cs-value').textContent = opt ? opt.text : '';
+      display.setAttribute('data-disabled', sel.disabled ? 'true' : 'false');
+      dropdown.querySelectorAll('.cs-option').forEach((item, i) => {
+        item.classList.toggle('selected', i === sel.selectedIndex);
+      });
+    }
+
+    function openDropdown() {
+      if (sel.disabled) return;
+      // Close all other open dropdowns
+      document.querySelectorAll('.cs-wrap.open').forEach(w => w.classList.remove('open'));
+      buildOptions();
+      wrap.classList.add('open');
+      // Scroll selected into view
+      const sel_item = dropdown.querySelector('.cs-option.selected');
+      if (sel_item) sel_item.scrollIntoView({ block: 'nearest' });
+    }
+
+    function closeDropdown() {
+      wrap.classList.remove('open');
+    }
+
+    display.addEventListener('click', e => {
+      e.stopPropagation();
+      wrap.classList.contains('open') ? closeDropdown() : openDropdown();
+    });
+
+    // Sync when native select value changes programmatically
+    sel.addEventListener('change', syncDisplay);
+
+    // Observe for option changes (e.g. when select is rebuilt)
+    const obs = new MutationObserver(() => { buildOptions(); syncDisplay(); });
+    obs.observe(sel, { childList: true, subtree: true, attributes: true });
+
+    buildOptions();
+    syncDisplay();
+  });
+
+  // Global close on outside click — idempotent guard
+  if (!document._csOutsideClickBound) {
+    document._csOutsideClickBound = true;
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.cs-wrap.open').forEach(w => w.classList.remove('open'));
+    });
+  }
+}
+
+// Re-run after any modal opens (called at the end of each openXxxModal)
+function refreshSelects(root = document) { initCustomSelects(root); }
 
 /* SETUP */
 function renderWorkingDays(){
@@ -193,6 +327,7 @@ function openTeacherModal(id){
       <span>${d}</span>
     </label>`).join('');
   $('teacherModal').classList.remove('hidden');
+  refreshSelects($('teacherModal'));
 }
 function saveTeacher(){
   const id=$('tId').value.trim()||nextTeacherId();
@@ -218,10 +353,11 @@ function saveTeacher(){
   toast('Teacher saved successfully!');
 }
 function deleteTeacher(id){
-  if(!confirm('Delete this teacher?')) return;
-  state.teachers=state.teachers.filter(t=>t.id!==id);
-  state.classes.forEach(c=>c.subjects.forEach(s=>s.teacherIds=s.teacherIds.filter(t=>t!==id)));
-  save(); renderTeachers(); toast('Teacher deleted','warn');
+  customConfirm('Delete this teacher? All their subject assignments will be removed.', () => {
+    state.teachers=state.teachers.filter(t=>t.id!==id);
+    state.classes.forEach(c=>c.subjects.forEach(s=>s.teacherIds=s.teacherIds.filter(t=>t!==id)));
+    save(); renderTeachers(); toast('Teacher deleted','warn');
+  }, { type:'danger', title:'Delete Teacher', confirmText:'Delete' });
 }
 function renderTeachers(){
   $('teachersTable').innerHTML = state.teachers.length? state.teachers.map(t=>{
@@ -342,6 +478,7 @@ function openSubjectModal(id){
   $('sTough').checked = s ? (s.tough !== false && (s.tough || isAutoToughSubject(s))) : false;
   $('sPriority').value = s && s.priority ? s.priority : 'semi-main';
   $('subjectModal').classList.remove('hidden');
+  refreshSelects($('subjectModal'));
 }
 function isAutoToughSubject(s){
   if(!s) return false;
@@ -374,11 +511,12 @@ function saveSubject(){
   toast('Subject saved!');
 }
 function deleteSubject(id){
-  if(!confirm('Delete this subject?')) return;
-  state.subjects=state.subjects.filter(s=>s.id!==id);
-  state.teachers.forEach(t=>t.subjects=t.subjects.filter(sid=>sid!==id));
-  state.classes.forEach(c=>c.subjects=c.subjects.filter(s=>s.subjectId!==id));
-  save(); renderSubjects(); toast('Subject deleted','warn');
+  customConfirm('Delete this subject? It will be removed from all teachers and classes.', () => {
+    state.subjects=state.subjects.filter(s=>s.id!==id);
+    state.teachers.forEach(t=>t.subjects=t.subjects.filter(sid=>sid!==id));
+    state.classes.forEach(c=>c.subjects=c.subjects.filter(s=>s.subjectId!==id));
+    save(); renderSubjects(); toast('Subject deleted','warn');
+  }, { type:'danger', title:'Delete Subject', confirmText:'Delete' });
 }
 function syncAlternativeGroups(subjectId, altIds){
   state.subjects.forEach(sx=>{
@@ -444,6 +582,11 @@ function handleClassNameChange(){
     $('cCourse').value='';
     $('cCourse').disabled=true;
   }
+  // Sync custom select disabled states
+  document.querySelectorAll('#cCourse.cs-initialized, #cName.cs-initialized').forEach(sel => {
+    const disp = sel.parentElement?.querySelector('.cs-display');
+    if(disp) disp.setAttribute('data-disabled', sel.disabled ? 'true' : 'false');
+  });
 }
 function openClassModal(id){
   editingIds.class=id;
@@ -454,6 +597,7 @@ function openClassModal(id){
   $('cCourse').value = c?c.course:'';
   handleClassNameChange();
   $('classModal').classList.remove('hidden');
+  refreshSelects($('classModal'));
 }
 function saveClass(){
   const name=$('cName').value;
@@ -503,9 +647,10 @@ function saveClass(){
   toast('Class saved!');
 }
 function deleteClass(id){
-  if(!confirm('Delete this class?')) return;
-  state.classes=state.classes.filter(c=>c.id!==id);
-  save(); renderClasses(); toast('Class deleted','warn');
+  customConfirm('Delete this class and all its subject mappings?', () => {
+    state.classes=state.classes.filter(c=>c.id!==id);
+    save(); renderClasses(); toast('Class deleted','warn');
+  }, { type:'danger', title:'Delete Class', confirmText:'Delete' });
 }
 function openClassSubjectsModal(clsId){
   editingIds.classSubj=clsId;
@@ -545,6 +690,7 @@ function openClassSubjectsModal(clsId){
   const isSenior=cls.name==='Class 11'||cls.name==='Class 12';
   $('applyStreamBtn').style.display=isSenior&&cls.course?'inline-flex':'none';
   $('classSubjectsModal').classList.remove('hidden');
+  /* no selects in this modal — table uses checkboxes/number inputs only */
 }
 const STREAM_TEMPLATES={
   'Medical':{sub_ENG:5,sub_PHY:7,sub_CHM:7,sub_BIO:7,sub_COM:4},
@@ -1212,27 +1358,22 @@ function renderHistory(){
 }
 
 function restoreHistory(index){
-  if(!confirm('This will replace your current timetable with this historical version. Proceed?')) return;
-  state.timetable = JSON.parse(JSON.stringify(state.history[index].timetable));
-  save();
-  switchView('class');
-  toast('Timetable restored from history!','success');
+  customConfirm('This will replace your current active timetable with the selected historical version.', () => {
+    state.timetable = JSON.parse(JSON.stringify(state.history[index].timetable));
+    save(); switchView('class'); toast('Timetable restored from history!','success');
+  }, { type:'warn', title:'Restore Timetable', confirmText:'Restore' });
 }
 
 function deleteHistory(index){
-  if(!confirm('Delete this history entry?')) return;
-  state.history.splice(index, 1);
-  save();
-  renderHistory();
-  toast('History deleted!','success');
+  customConfirm('Delete this history entry permanently?', () => {
+    state.history.splice(index, 1); save(); renderHistory(); toast('History deleted!','success');
+  }, { type:'danger', title:'Delete Entry', confirmText:'Delete' });
 }
 
 function clearAllHistory(){
-  if(!confirm('Are you sure you want to delete all history? This cannot be undone.')) return;
-  state.history = [];
-  save();
-  renderHistory();
-  toast('All history cleared!','success');
+  customConfirm('Delete ALL history entries? This cannot be undone.', () => {
+    state.history = []; save(); renderHistory(); toast('All history cleared!','success');
+  }, { type:'danger', title:'Clear All History', confirmText:'Clear All' });
 }
 
 function showInfoModal(title, msg){
@@ -1841,7 +1982,9 @@ function importData(event){
 }
 
 function loadSampleData(){
-  if(!confirm('Load sample data? This will replace current data.')) return;
+  customConfirm('Load demo school data? This will replace all your current data.', _doLoadSampleData, { type:'warn', title:'Load Sample Data', confirmText:'Load Demo' });
+}
+function _doLoadSampleData(){
   state.teachers=[]; state.subjects=[]; state.classes=[]; state.timetable=null;
   state.setup={ schoolName:'Greenwood Public School', academicYear:'2024-25', periodsPerDay:8, periodDuration:45, breakAfter:4, breakDuration:20, workingDays:['Mon','Tue','Wed','Thu','Fri','Sat'], schoolLogo:null };
   
@@ -1907,3 +2050,6 @@ function loadSampleData(){
 }
 
 renderTeachers(); renderSubjects(); renderClasses(); renderGenerateStats();
+
+/* ── Init custom selects on page load ────────────────────── */
+initCustomSelects();

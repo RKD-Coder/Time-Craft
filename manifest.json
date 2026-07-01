@@ -1,0 +1,20 @@
+{
+  "name": "Time Craft",
+  "short_name": "Time Craft",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0C0C0C",
+  "theme_color": "#F2613F",
+  "icons": [
+    {
+      "src": "Icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "Icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

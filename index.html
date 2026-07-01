@@ -19,6 +19,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#F2613F">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -30,8 +32,8 @@
 <div id="navDrawer" class="nav-drawer">
   <div class="nav-drawer-header">
     <div class="nav-drawer-brand">
-      <div class="brand-icon-wrap" style="width:32px;height:32px;border-radius:8px;">
-        <i class="ri-calendar-schedule-line" style="font-size:16px;"></i>
+      <div class="brand-icon-wrap" style="width:32px;height:32px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+        <img src="logo.png" alt="Time Craft" style="width:100%;height:100%;object-fit:cover;">
       </div>
       <span class="brand-name" style="font-size:.95rem;">Time Craft</span>
     </div>
@@ -84,8 +86,8 @@
     <div class="header-left">
       <!-- Brand -->
       <div class="brand">
-        <div class="brand-icon-wrap">
-          <i class="ri-calendar-schedule-line"></i>
+        <div class="brand-icon-wrap" style="overflow:hidden;display:flex;align-items:center;justify-content:center;">
+          <img src="logo.png" alt="Time Craft" style="width:100%;height:100%;object-fit:cover;">
         </div>
         <div class="brand-text">
           <div class="brand-name">Time Craft</div>
