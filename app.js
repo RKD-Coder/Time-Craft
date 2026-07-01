@@ -13,12 +13,12 @@ const $ = id => document.getElementById(id);
 
 /* ── Theme ──────────────────────────────────────────────── */
 function initTheme(){
-  const saved = localStorage.getItem('tc_theme') || 'dark';
+  const saved = localStorage.getItem('tc_theme') || 'light';
   document.documentElement.setAttribute('data-theme', saved);
   updateThemeIcon(saved);
 }
 function toggleTheme(){
-  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
   const next = current === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('tc_theme', next);
@@ -1632,7 +1632,7 @@ function addPdfHeader(doc, title, subtitle, loadLine){
   doc.setFont(undefined,'normal');
   doc.text(title,textX,headerY+36);
   const lineY=headerY+logoSize+8;
-  doc.setDrawColor(242,97,63);
+  doc.setDrawColor(0,100,250);
   doc.setLineWidth(1);
   doc.line(40,lineY,pageWidth-40,lineY);
   let curY=lineY+18;
@@ -1744,7 +1744,7 @@ function downloadCurrentPDF(){
     return row;
   });
   const startY=addPdfHeader(doc, title, subtitle, loadLine);
-  doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:8,cellPadding:6,lineWidth:0.5,lineColor:[100,100,100]}, headStyles:{fillColor:[242,97,63],textColor:255,fontSize:9}, columnStyles:{0:{fillColor:[255,206,153],textColor:[86,47,0],fontStyle:'bold',cellWidth:50}}});
+  doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:8,cellPadding:6,lineWidth:0.5,lineColor:[100,100,100]}, headStyles:{fillColor:[0,100,250],textColor:255,fontSize:9}, columnStyles:{0:{fillColor:[230,240,255],textColor:[26,28,28],fontStyle:'bold',cellWidth:50}}});
   addPdfSignature(doc);
   doc.save(`${title.replace(/[^a-z0-9]/gi,'_')}.pdf`);
   toast('PDF downloaded!');
@@ -1782,7 +1782,7 @@ function downloadAllClassPDF(){
       } 
       return row; 
     });
-    doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:7,cellPadding:4}, headStyles:{fillColor:[242,97,63],textColor:255}, columnStyles:{0:{cellWidth:40,fontStyle:'bold'}}});
+    doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:7,cellPadding:4}, headStyles:{fillColor:[0,100,250],textColor:255}, columnStyles:{0:{cellWidth:40,fontStyle:'bold'}}});
     addPdfSignature(doc);
   });
   doc.save('All_Class_Timetables.pdf');
@@ -1819,7 +1819,7 @@ function downloadAllTeacherPDF(){
       } 
       return row; 
     });
-    doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:7,cellPadding:4}, headStyles:{fillColor:[155,57,34],textColor:255}, columnStyles:{0:{cellWidth:40,fontStyle:'bold'}}});
+    doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:7,cellPadding:4}, headStyles:{fillColor:[79,84,92],textColor:255}, columnStyles:{0:{cellWidth:40,fontStyle:'bold'}}});
     addPdfSignature(doc);
   });
   doc.save('All_Teacher_Timetables.pdf');

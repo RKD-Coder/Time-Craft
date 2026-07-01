@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -293,7 +293,7 @@
     <div class="card p-6 mb-4">
       <div class="flex items-center gap-3 mb-5">
         <div class="brand-icon-wrap" style="width:36px;height:36px;flex-shrink:0;">
-          <i class="ri-flashlight-line" style="font-size:18px;"></i>
+          <i class="ri-magic-line" style="font-size:18px;"></i>
         </div>
         <div>
           <h2 class="section-title">Generate Timetable</h2>
@@ -465,8 +465,9 @@
 
 <!-- ── TEACHER MODAL ─────────────────────────────────────── -->
 <div id="teacherModal" class="modal-bg hidden">
-  <div class="card p-6" style="width:100%;max-width:720px;max-height:90vh;overflow-y:auto;">
-    <div class="flex justify-between items-center mb-4">
+  <div class="card" style="width:100%;max-width:720px;max-height:90vh;border-radius:var(--r-xl);overflow:hidden;">
+    <div class="p-6" style="max-height:90vh;overflow-y:auto;">
+      <div class="flex justify-between items-center mb-4">
       <h3 class="section-title" id="teacherModalTitle">Add Teacher</h3>
       <button class="btn-icon" onclick="closeModal('teacherModal')"><i class="ri-close-line"></i></button>
     </div>
@@ -520,6 +521,7 @@
         <i class="ri-save-3-line"></i> Save Teacher
       </button>
     </div>
+  </div>
   </div>
 </div>
 
@@ -623,7 +625,8 @@
 
 <!-- ── CLASS SUBJECTS MODAL ──────────────────────────────── -->
 <div id="classSubjectsModal" class="modal-bg hidden">
-  <div class="card p-6" style="width:100%;max-width:900px;max-height:90vh;overflow-y:auto;">
+  <div class="card" style="width:100%;max-width:900px;max-height:90vh;border-radius:var(--r-xl);overflow:hidden;">
+    <div class="p-6" style="max-height:90vh;overflow-y:auto;">
     <div class="flex justify-between items-center mb-4">
       <h3 class="section-title" id="classSubjectsTitle">Manage Subjects</h3>
       <button class="btn-icon" onclick="closeModal('classSubjectsModal')"><i class="ri-close-line"></i></button>
@@ -637,6 +640,7 @@
         <i class="ri-save-3-line"></i> Save Mapping
       </button>
     </div>
+  </div>
   </div>
 </div>
 
