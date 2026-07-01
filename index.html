@@ -1,49 +1,142 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Time Craft</title>
+<title>Time Craft — Smart Timetable Generator</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Icons: RemixIcon -->
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+
+<!-- Libs -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<div class="max-w-7xl mx-auto p-4 md:p-6">
+<!-- ── Mobile Nav Overlay ─────────────────────────────────── -->
+<div id="navOverlay" class="nav-overlay" onclick="closeMobileNav()"></div>
 
-  <header class="card p-5 mb-5">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl md:text-3xl font-bold gradient-text">📅 Time Craft</h1>
-        <p class="text-sm text-slate-400 mt-1">Modern Indian School System · CBSE/State Board Pattern · Classes 1–12</p>
+<!-- ── Mobile Nav Drawer ──────────────────────────────────── -->
+<div id="navDrawer" class="nav-drawer">
+  <div class="nav-drawer-header">
+    <div class="nav-drawer-brand">
+      <div class="brand-icon-wrap" style="width:32px;height:32px;border-radius:8px;">
+        <i class="ri-calendar-schedule-line" style="font-size:16px;"></i>
       </div>
-      <div class="flex gap-2 flex-wrap">
-        <button class="btn btn-ghost" onclick="exportData()">⬇️ Export Data</button>
-        <label class="btn btn-ghost cursor-pointer">
-          ⬆️ Import Data
-          <input type="file" accept=".json" onchange="importData(event)" class="hidden">
-        </label>
-        <button class="btn btn-danger" onclick="if(confirm('Reset all data?')){localStorage.clear();location.reload()}">🗑️ Reset</button>
+      <span class="brand-name" style="font-size:.95rem;">Time Craft</span>
+    </div>
+    <button class="btn-icon" onclick="closeMobileNav()" title="Close menu">
+      <i class="ri-close-line"></i>
+    </button>
+  </div>
+  <nav class="nav-drawer-list">
+    <div class="nav-drawer-item tab active" data-tab="setup" onclick="closeMobileNav()">
+      <i class="ri-settings-3-line"></i>
+      School Setup
+    </div>
+    <div class="nav-drawer-item tab" data-tab="teachers" onclick="closeMobileNav()">
+      <i class="ri-user-star-line"></i>
+      Teachers
+    </div>
+    <div class="nav-drawer-item tab" data-tab="subjects" onclick="closeMobileNav()">
+      <i class="ri-book-2-line"></i>
+      Subjects
+    </div>
+    <div class="nav-drawer-item tab" data-tab="classes" onclick="closeMobileNav()">
+      <i class="ri-graduation-cap-line"></i>
+      Classes
+    </div>
+    <div class="nav-drawer-item tab" data-tab="generate" onclick="closeMobileNav()">
+      <i class="ri-flashlight-line"></i>
+      Generate
+    </div>
+    <div class="nav-drawer-item tab" data-tab="view" onclick="closeMobileNav()">
+      <i class="ri-layout-grid-line"></i>
+      View Timetables
+    </div>
+  </nav>
+  <div class="nav-drawer-footer">
+    <button class="drawer-theme-btn" onclick="toggleTheme()">
+      <span class="theme-left">
+        <i id="drawerThemeIcon" class="ri-sun-line"></i>
+        <span id="drawerThemeLabel">Dark Mode</span>
+      </span>
+      <span class="theme-switch"></span>
+    </button>
+  </div>
+</div>
+
+<!-- ── App Wrapper ────────────────────────────────────────── -->
+<div class="app-wrapper">
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <!-- Brand -->
+      <div class="brand">
+        <div class="brand-icon-wrap">
+          <i class="ri-calendar-schedule-line"></i>
+        </div>
+        <div class="brand-text">
+          <div class="brand-name">Time Craft</div>
+          <div class="brand-sub">CBSE / State Board · Classes 1–12</div>
+        </div>
       </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Desktop theme toggle -->
+      <button id="themeToggle" class="btn-icon desktop-only" onclick="toggleTheme()" title="Toggle theme">
+        <i id="themeIcon" class="ri-sun-line"></i>
+      </button>
+      <!-- Mobile hamburger (top-right) -->
+      <button class="btn-icon mobile-only" id="mobileMenuBtn" onclick="openMobileNav()" title="Menu">
+        <i class="ri-menu-3-line"></i>
+      </button>
     </div>
   </header>
 
-  <nav class="card p-2 mb-5 flex gap-1 overflow-x-auto scrollbar">
-    <div class="tab active" data-tab="setup">⚙️ School Setup</div>
-    <div class="tab" data-tab="teachers">👨‍🏫 Teachers</div>
-    <div class="tab" data-tab="subjects">📚 Subjects</div>
-    <div class="tab" data-tab="classes">🎓 Classes</div>
-    <div class="tab" data-tab="generate">⚡ Generate</div>
-    <div class="tab" data-tab="view">📋 View Timetables</div>
+  <!-- Desktop Tab Nav -->
+  <nav class="tab-nav" style="margin: 8px 0;">
+    <div class="tab active" data-tab="setup">
+      <i class="ri-settings-3-line"></i> School Setup
+    </div>
+    <div class="tab" data-tab="teachers">
+      <i class="ri-user-star-line"></i> Teachers
+    </div>
+    <div class="tab" data-tab="subjects">
+      <i class="ri-book-2-line"></i> Subjects
+    </div>
+    <div class="tab" data-tab="classes">
+      <i class="ri-graduation-cap-line"></i> Classes
+    </div>
+    <div class="tab" data-tab="generate">
+      <i class="ri-flashlight-line"></i> Generate
+    </div>
+    <div class="tab" data-tab="view">
+      <i class="ri-layout-grid-line"></i> View Timetables
+    </div>
   </nav>
 
-  <!-- SETUP TAB -->
+  <!-- ── SETUP TAB ───────────────────────────────────────── -->
   <section id="tab-setup" class="tab-content">
     <div class="card p-6">
-      <h2 class="text-xl font-bold mb-4">School Configuration</h2>
+      <div class="flex justify-between items-center mb-5 flex-wrap gap-2">
+        <div>
+          <h2 class="section-title">School Configuration</h2>
+          <p class="section-subtitle">Set up your school's basic timetable parameters</p>
+        </div>
+      </div>
       <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <label>School Name</label>
@@ -75,40 +168,70 @@
         </div>
         <div class="md:col-span-2 lg:col-span-3 grid md:grid-cols-2 gap-4">
           <div>
-            <label>School Logo (PNG/JPG for PDFs)</label>
+            <label>School Logo <span style="text-transform:none;letter-spacing:0;font-weight:400;">(PNG/JPG for PDFs)</span></label>
             <div class="flex items-center gap-4">
               <input id="schoolLogo" type="file" accept="image/png, image/jpeg" class="input" onchange="handleImageUpload(event, 'schoolLogo')">
-              <img id="logoPreview" class="hidden h-16 w-16 object-contain bg-white p-1 rounded-lg" alt="Logo">
+              <img id="logoPreview" class="hidden" style="height:56px;width:56px;object-fit:contain;background:var(--card-2);padding:4px;border-radius:var(--r);border:1px solid var(--border);" alt="Logo">
             </div>
           </div>
           <div>
-            <label>Principal Signature (PNG/JPG for PDFs)</label>
+            <label>Principal Signature <span style="text-transform:none;letter-spacing:0;font-weight:400;">(PNG/JPG for PDFs)</span></label>
             <div class="flex items-center gap-4">
               <input id="principalSign" type="file" accept="image/png, image/jpeg" class="input" onchange="handleImageUpload(event, 'principalSign')">
-              <img id="signPreview" class="hidden h-16 w-32 object-contain bg-white p-1 rounded-lg" alt="Signature">
+              <img id="signPreview" class="hidden" style="height:56px;width:128px;object-fit:contain;background:var(--card-2);padding:4px;border-radius:var(--r);border:1px solid var(--border);" alt="Signature">
             </div>
           </div>
         </div>
       </div>
-      <div class="mt-5 flex gap-2">
-        <button class="btn btn-primary" onclick="saveSetup()">💾 Save Configuration</button>
-        <button class="btn btn-ghost" onclick="loadSampleData()">✨ Load Sample Demo Data</button>
+      <div class="mt-5 flex gap-2 flex-wrap">
+        <button class="btn btn-primary" onclick="saveSetup()">
+          <i class="ri-save-3-line"></i> Save Configuration
+        </button>
+        <button class="btn btn-ghost" onclick="loadSampleData()">
+          <i class="ri-magic-line"></i> Load Sample Demo Data
+        </button>
+      </div>
+
+      <!-- Data Management -->
+      <div class="mt-6 pt-5" style="border-top:1px solid var(--border);">
+        <div class="mb-3">
+          <h3 class="section-title" style="font-size:1rem;">Data Management</h3>
+          <p class="section-subtitle">Back up, restore, or clear all your data</p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <button class="btn btn-outline" onclick="exportData()" title="Export all data as JSON">
+            <i class="ri-download-2-line"></i> Export Data
+          </button>
+          <label class="btn btn-outline" style="cursor:pointer;" title="Import data from JSON">
+            <i class="ri-upload-2-line"></i> Import Data
+            <input type="file" accept=".json" onchange="importData(event)" class="hidden">
+          </label>
+          <button class="btn btn-danger-outline" onclick="confirmReset()" title="Reset all data">
+            <i class="ri-delete-bin-5-line"></i> Reset All Data
+          </button>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- TEACHERS TAB -->
+  <!-- ── TEACHERS TAB ────────────────────────────────────── -->
   <section id="tab-teachers" class="tab-content hidden">
     <div class="card p-6">
-      <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <h2 class="text-xl font-bold">Teacher Management <span class="text-sm text-slate-400 font-normal">(Sorted by Level)</span></h2>
-        <button class="btn btn-primary" onclick="openTeacherModal()">➕ Add Teacher</button>
+      <div class="flex justify-between items-center mb-5 flex-wrap gap-2">
+        <div>
+          <h2 class="section-title">Teacher Management</h2>
+          <p class="section-subtitle">Sorted by level — PGT · TGT · PRT</p>
+        </div>
+        <button class="btn btn-primary" onclick="openTeacherModal()">
+          <i class="ri-add-circle-line"></i> Add Teacher
+        </button>
       </div>
       <div class="overflow-x-auto scrollbar">
         <table>
           <thead>
             <tr>
-              <th>ID</th><th>Level</th><th>Name</th><th>Subjects</th><th>Eligible Classes</th><th>Max/Day</th><th>Max/Week</th><th>Actions</th>
+              <th>ID</th><th>Level</th><th>Name</th><th>Subjects</th>
+              <th>Eligible Classes</th><th>Max/Day</th><th>Max/Week</th><th>Actions</th>
             </tr>
           </thead>
           <tbody id="teachersTable"></tbody>
@@ -117,12 +240,17 @@
     </div>
   </section>
 
-  <!-- SUBJECTS TAB -->
+  <!-- ── SUBJECTS TAB ────────────────────────────────────── -->
   <section id="tab-subjects" class="tab-content hidden">
     <div class="card p-6">
-      <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <h2 class="text-xl font-bold">Subject Master</h2>
-        <button class="btn btn-primary" onclick="openSubjectModal()">➕ Add Subject</button>
+      <div class="flex justify-between items-center mb-5 flex-wrap gap-2">
+        <div>
+          <h2 class="section-title">Subject Master</h2>
+          <p class="section-subtitle">Define subjects, types, and elective groups</p>
+        </div>
+        <button class="btn btn-primary" onclick="openSubjectModal()">
+          <i class="ri-add-circle-line"></i> Add Subject
+        </button>
       </div>
       <div class="overflow-x-auto scrollbar">
         <table>
@@ -135,12 +263,17 @@
     </div>
   </section>
 
-  <!-- CLASSES TAB -->
+  <!-- ── CLASSES TAB ─────────────────────────────────────── -->
   <section id="tab-classes" class="tab-content hidden">
     <div class="card p-6">
-      <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <h2 class="text-xl font-bold">Class Management & Subject Mapping</h2>
-        <button class="btn btn-primary" onclick="openClassModal()">➕ Add Class</button>
+      <div class="flex justify-between items-center mb-5 flex-wrap gap-2">
+        <div>
+          <h2 class="section-title">Class Management</h2>
+          <p class="section-subtitle">Manage classes and subject-teacher mapping</p>
+        </div>
+        <button class="btn btn-primary" onclick="openClassModal()">
+          <i class="ri-add-circle-line"></i> Add Class
+        </button>
       </div>
       <div class="overflow-x-auto scrollbar">
         <table>
@@ -153,117 +286,187 @@
     </div>
   </section>
 
-  <!-- GENERATE TAB -->
+  <!-- ── GENERATE TAB ────────────────────────────────────── -->
   <section id="tab-generate" class="tab-content hidden">
     <div class="card p-6 mb-4">
-      <h2 class="text-xl font-bold mb-4">⚡ Generate Timetable</h2>
-      <div class="grid md:grid-cols-3 gap-4 mb-4">
-        <div class="stat-card">
-          <div class="text-3xl font-bold text-indigo-300" id="statClasses">0</div>
-          <div class="text-xs text-slate-400 mt-1">Classes to Schedule</div>
+      <div class="flex items-center gap-3 mb-5">
+        <div class="brand-icon-wrap" style="width:36px;height:36px;flex-shrink:0;">
+          <i class="ri-flashlight-line" style="font-size:18px;"></i>
         </div>
-        <div class="stat-card">
-          <div class="text-3xl font-bold text-emerald-300" id="statTeachers">0</div>
-          <div class="text-xs text-slate-400 mt-1">Teachers Available</div>
-        </div>
-        <div class="stat-card">
-          <div class="text-3xl font-bold text-purple-300" id="statSlots">0</div>
-          <div class="text-xs text-slate-400 mt-1">Total Slots to Fill</div>
+        <div>
+          <h2 class="section-title">Generate Timetable</h2>
+          <p class="section-subtitle">3-phase intelligent scheduling engine</p>
         </div>
       </div>
-      <div class="flex gap-3 flex-wrap">
-        <button class="btn btn-success" onclick="generateTimetable()">🚀 Generate Full Timetable</button>
-        <button class="btn btn-warn" onclick="validateBeforeGeneration()">🔍 Pre-Generation Check</button>
+
+      <div class="grid md:grid-cols-3 gap-4 mb-5">
+        <div class="stat-card">
+          <div class="stat-value" id="statClasses" style="color:var(--primary);">0</div>
+          <div class="stat-label">Classes to Schedule</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statTeachers" style="color:var(--secondary);">0</div>
+          <div class="stat-label">Teachers Available</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statSlots" style="color:var(--primary-h);">0</div>
+          <div class="stat-label">Total Slots to Fill</div>
+        </div>
       </div>
-      <div class="mt-3 text-xs text-slate-400 grid md:grid-cols-3 gap-2">
-        <div class="p-2 rounded-lg bg-slate-900/40 border border-slate-700">① Assign subjects (tough → P1–5, senior stream sync)</div>
-        <div class="p-2 rounded-lg bg-slate-900/40 border border-slate-700">② Assign teachers (fallback pool, max 3 consecutive)</div>
-        <div class="p-2 rounded-lg bg-slate-900/40 border border-slate-700">③ Build final timetable (all slots filled)</div>
+
+      <div class="flex gap-3 flex-wrap mb-5">
+        <button class="btn btn-success" onclick="generateTimetable()">
+          <i class="ri-rocket-line"></i> Generate Full Timetable
+        </button>
+        <button class="btn btn-warn" onclick="validateBeforeGeneration()">
+          <i class="ri-search-eye-line"></i> Pre-Generation Check
+        </button>
       </div>
-      <div id="genLog" class="mt-4 p-4 rounded-xl bg-slate-900/60 border border-slate-700 text-sm font-mono max-h-72 overflow-y-auto scrollbar hidden"></div>
+
+      <div class="grid md:grid-cols-3 gap-3 mb-4">
+        <div class="gen-step">
+          <div class="gen-step-num">①</div>
+          <div>Assign subjects — tough subjects in P1–5, senior stream sync</div>
+        </div>
+        <div class="gen-step">
+          <div class="gen-step-num">②</div>
+          <div>Assign teachers — fallback pool, max 3 consecutive</div>
+        </div>
+        <div class="gen-step">
+          <div class="gen-step-num">③</div>
+          <div>Build final timetable — all slots verified and filled</div>
+        </div>
+      </div>
+
+      <div id="genLog" class="mt-2 hidden"></div>
       <div id="genErrors" class="mt-4 hidden"></div>
       <div id="genSuccess" class="mt-4 hidden"></div>
     </div>
   </section>
 
-  <!-- VIEW TAB -->
+  <!-- ── VIEW TAB ────────────────────────────────────────── -->
   <section id="tab-view" class="tab-content hidden">
     <div class="card p-6">
-      <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <h2 class="text-xl font-bold">Generated Timetables</h2>
+      <div class="flex justify-between items-center mb-5 flex-wrap gap-2">
+        <div>
+          <h2 class="section-title">Generated Timetables</h2>
+          <p class="section-subtitle">View, edit, and export timetables</p>
+        </div>
         <div class="relative">
-          <button class="btn btn-ghost" onclick="toggleDownloadMenu()">⬇️ Download All ▾</button>
+          <button class="btn btn-ghost" onclick="toggleDownloadMenu()">
+            <i class="ri-cloud-download-line"></i> Download All <i class="ri-arrow-down-s-line"></i>
+          </button>
           <div id="downloadMenu" class="dropdown-menu hidden">
-            <div class="dropdown-item" onclick="downloadAllClassPDF();toggleDownloadMenu()">📄 All Classes PDF</div>
-            <div class="dropdown-item" onclick="downloadAllClassExcel();toggleDownloadMenu()">📊 All Classes Excel</div>
-            <div class="dropdown-item" onclick="downloadAllTeacherPDF();toggleDownloadMenu()">📄 All Teachers PDF</div>
-            <div class="dropdown-item" onclick="downloadAllTeacherExcel();toggleDownloadMenu()">📊 All Teachers Excel</div>
-            <div class="dropdown-item" onclick="downloadMasterCSV();toggleDownloadMenu()">📊 Master CSV</div>
+            <div class="dropdown-item" onclick="downloadAllClassPDF();toggleDownloadMenu()">
+              <i class="ri-file-pdf-2-line"></i> All Classes PDF
+            </div>
+            <div class="dropdown-item" onclick="downloadAllClassExcel();toggleDownloadMenu()">
+              <i class="ri-file-excel-2-line"></i> All Classes Excel
+            </div>
+            <hr class="dropdown-divider">
+            <div class="dropdown-item" onclick="downloadAllTeacherPDF();toggleDownloadMenu()">
+              <i class="ri-file-pdf-2-line"></i> All Teachers PDF
+            </div>
+            <div class="dropdown-item" onclick="downloadAllTeacherExcel();toggleDownloadMenu()">
+              <i class="ri-file-excel-2-line"></i> All Teachers Excel
+            </div>
+            <hr class="dropdown-divider">
+            <div class="dropdown-item" onclick="downloadMasterCSV();toggleDownloadMenu()">
+              <i class="ri-table-line"></i> Master CSV
+            </div>
           </div>
         </div>
       </div>
+
       <div class="flex gap-2 mb-4 flex-wrap">
-        <button class="tab active" id="viewClassBtn" onclick="switchView('class')">🎓 Class Timetables</button>
-        <button class="tab" id="viewTeacherBtn" onclick="switchView('teacher')">👨‍🏫 Teacher Timetables</button>
-        <button class="tab" id="viewHistoryBtn" onclick="switchView('history')">🕰️ History</button>
+        <button class="tab active" id="viewClassBtn" onclick="switchView('class')">
+          <i class="ri-graduation-cap-line"></i> Class Timetables
+        </button>
+        <button class="tab" id="viewTeacherBtn" onclick="switchView('teacher')">
+          <i class="ri-user-star-line"></i> Teacher Timetables
+        </button>
+        <button class="tab" id="viewHistoryBtn" onclick="switchView('history')">
+          <i class="ri-history-line"></i> History
+        </button>
       </div>
+
       <div id="viewControls" class="flex gap-2 mb-4 flex-wrap items-center">
-        <select id="viewSelect" class="input max-w-sm" onchange="renderTimetable()"></select>
-        <button class="btn btn-primary" onclick="downloadCurrentPDF()">📄 Download PDF</button>
-        <button class="btn btn-ghost" onclick="downloadCurrentCSV()">📊 Download CSV</button>
-        <button class="btn btn-success" onclick="downloadCurrentExcel()">📊 Download Excel</button>
-        <button id="editModeBtn" class="btn btn-ghost" onclick="toggleEditMode()">✏️ Edit Mode: OFF</button>
+        <select id="viewSelect" class="input" style="max-width:280px;" onchange="renderTimetable()"></select>
+        <button class="btn btn-primary btn-sm" onclick="downloadCurrentPDF()">
+          <i class="ri-file-pdf-2-line"></i> PDF
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="downloadCurrentCSV()">
+          <i class="ri-table-line"></i> CSV
+        </button>
+        <button class="btn btn-success btn-sm" onclick="downloadCurrentExcel()">
+          <i class="ri-file-excel-2-line"></i> Excel
+        </button>
+        <button id="editModeBtn" class="btn btn-ghost btn-sm" onclick="toggleEditMode()">
+          <i class="ri-edit-line"></i> Edit Mode: OFF
+        </button>
       </div>
+
       <div id="timetableRender"></div>
     </div>
   </section>
 
-</div>
+</div><!-- end .app-wrapper -->
 
-<!-- EDIT SLOT MODAL -->
+<!-- ── EDIT SLOT MODAL ───────────────────────────────────── -->
 <div id="editSlotModal" class="modal-bg hidden">
-  <div class="card p-6 w-full max-w-md">
-    <h3 class="text-lg font-bold mb-4" id="editSlotTitle">Edit Slot</h3>
+  <div class="card p-6" style="max-width:420px;width:100%;">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="section-title" id="editSlotTitle">Edit Slot</h3>
+      <button class="btn-icon" onclick="closeModal('editSlotModal')"><i class="ri-close-line"></i></button>
+    </div>
     <input type="hidden" id="editSlotD">
     <input type="hidden" id="editSlotP">
-    <div id="editSlotOptions" class="space-y-2 max-h-60 overflow-y-auto scrollbar"></div>
+    <div id="editSlotOptions" class="space-y-2 max-h-64" style="overflow-y:auto;"></div>
     <div class="mt-4 flex gap-2">
       <button class="btn btn-ghost" onclick="closeModal('editSlotModal')">Cancel</button>
-      <button class="btn btn-danger" onclick="clearSlot()">Clear Slot</button>
+      <button class="btn btn-danger-outline" onclick="clearSlot()">
+        <i class="ri-eraser-line"></i> Clear Slot
+      </button>
     </div>
   </div>
 </div>
 
-<!-- TEACHER MAPPING MODAL -->
-<div id="teacherMappingModal" class="modal-bg hidden z-40">
-  <div class="card p-6 w-full max-w-2xl max-h-[90vh] flex flex-col">
+<!-- ── TEACHER MAPPING MODAL ─────────────────────────────── -->
+<div id="teacherMappingModal" class="modal-bg hidden" style="z-index:60;">
+  <div class="card p-6" style="width:100%;max-width:640px;max-height:90vh;display:flex;flex-direction:column;">
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-bold" id="teacherMappingTitle">Map Subjects</h3>
-      <button class="btn btn-ghost" onclick="closeModal('teacherMappingModal')">✕</button>
+      <h3 class="section-title" id="teacherMappingTitle">Map Subjects</h3>
+      <button class="btn-icon" onclick="closeModal('teacherMappingModal')"><i class="ri-close-line"></i></button>
     </div>
-    <div class="flex-1 overflow-y-auto scrollbar space-y-4 pr-2" id="teacherMappingArea"></div>
-    <div class="mt-4 flex gap-2">
-      <button class="btn btn-primary" onclick="saveTeacherMapping()">💾 Save Mapping</button>
+    <div class="flex-1 overflow-y-auto scrollbar space-y-3 pr-1" id="teacherMappingArea"></div>
+    <div class="mt-4 flex gap-2 pt-4" style="border-top:1px solid var(--border);flex-shrink:0;">
+      <button class="btn btn-primary" onclick="saveTeacherMapping()">
+        <i class="ri-save-3-line"></i> Save Mapping
+      </button>
     </div>
   </div>
 </div>
 
-<!-- INFO MODAL -->
-<div id="infoModal" class="modal-bg hidden z-50">
-  <div class="card p-6 w-full max-w-sm text-center mx-auto mt-20">
-    <div class="text-4xl mb-3">ℹ️</div>
-    <h3 class="text-lg font-bold mb-2" id="infoModalTitle">Info</h3>
-    <p class="text-sm text-slate-300 mb-6" id="infoModalBody"></p>
-    <button class="btn btn-primary" onclick="closeModal('infoModal')">Close</button>
+<!-- ── INFO MODAL ────────────────────────────────────────── -->
+<div id="infoModal" class="modal-bg hidden" style="z-index:70;">
+  <div class="card p-6" style="max-width:360px;width:100%;text-align:center;">
+    <div style="width:48px;height:48px;border-radius:50%;background:var(--info-dim);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+      <i class="ri-information-line" style="font-size:24px;color:var(--info);"></i>
+    </div>
+    <h3 class="section-title mb-2" id="infoModalTitle">Info</h3>
+    <p style="font-size:.875rem;color:var(--text-2);margin-bottom:1.5rem;" id="infoModalBody"></p>
+    <button class="btn btn-primary" onclick="closeModal('infoModal')">
+      <i class="ri-check-line"></i> Close
+    </button>
   </div>
 </div>
 
-<!-- TEACHER MODAL -->
+<!-- ── TEACHER MODAL ─────────────────────────────────────── -->
 <div id="teacherModal" class="modal-bg hidden">
-  <div class="card p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto scrollbar">
+  <div class="card p-6" style="width:100%;max-width:720px;max-height:90vh;overflow-y:auto;">
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-bold" id="teacherModalTitle">Add Teacher</h3>
-      <button class="btn btn-ghost" onclick="closeModal('teacherModal')">✕</button>
+      <h3 class="section-title" id="teacherModalTitle">Add Teacher</h3>
+      <button class="btn-icon" onclick="closeModal('teacherModal')"><i class="ri-close-line"></i></button>
     </div>
     <div class="grid md:grid-cols-2 gap-4">
       <div>
@@ -277,9 +480,9 @@
       <div>
         <label>Teaching Level *</label>
         <select id="tLevel" class="input">
-          <option value="PGT">PGT (Post Graduate Teacher - 11th/12th)</option>
-          <option value="TGT">TGT (Trained Graduate Teacher - 6th-10th)</option>
-          <option value="PRT">PRT (Primary Teacher - 1st-5th)</option>
+          <option value="PGT">PGT — Post Graduate Teacher (11th/12th)</option>
+          <option value="TGT">TGT — Trained Graduate Teacher (6th–10th)</option>
+          <option value="PRT">PRT — Primary Teacher (1st–5th)</option>
           <option value="OTHER">OTHER</option>
         </select>
       </div>
@@ -292,36 +495,38 @@
         <input id="tMaxWeek" type="number" class="input" value="30" min="1" max="50">
       </div>
       <div class="md:col-span-2">
-        <div class="flex justify-between items-center mb-1">
-          <label>Subjects Can Teach *</label>
-          <button class="btn btn-ghost btn-sm py-0 px-2 text-xs border border-slate-700" onclick="toggleSelectAll('tSubjects', this)">Select All</button>
+        <div class="flex justify-between items-center mb-2">
+          <label style="margin-bottom:0;">Subjects Can Teach *</label>
+          <button class="btn btn-outline btn-sm" onclick="toggleSelectAll('tSubjects', this)">Select All</button>
         </div>
-        <div id="tSubjects" class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto scrollbar p-2 rounded-xl bg-slate-900/40 border border-slate-700"></div>
+        <div id="tSubjects" class="grid grid-cols-2 md:grid-cols-3 gap-2" style="max-height:160px;overflow-y:auto;padding:10px;border-radius:var(--r-lg);background:var(--bg-alt);border:1px solid var(--border);"></div>
       </div>
       <div class="md:col-span-2">
-        <div class="flex justify-between items-center mb-1">
-          <label>Eligible Classes / Sections *</label>
-          <button class="btn btn-ghost btn-sm py-0 px-2 text-xs border border-slate-700" onclick="toggleSelectAll('tClasses', this)">Select All</button>
+        <div class="flex justify-between items-center mb-2">
+          <label style="margin-bottom:0;">Eligible Classes / Sections *</label>
+          <button class="btn btn-outline btn-sm" onclick="toggleSelectAll('tClasses', this)">Select All</button>
         </div>
-        <div id="tClasses" class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto scrollbar p-2 rounded-xl bg-slate-900/40 border border-slate-700"></div>
+        <div id="tClasses" class="grid grid-cols-2 md:grid-cols-3 gap-2" style="max-height:160px;overflow-y:auto;padding:10px;border-radius:var(--r-lg);background:var(--bg-alt);border:1px solid var(--border);"></div>
       </div>
       <div class="md:col-span-2">
         <label>Unavailable Days (Optional)</label>
         <div id="tUnavailable" class="flex flex-wrap gap-2"></div>
       </div>
     </div>
-    <div class="flex gap-2 mt-5">
-      <button class="btn btn-primary" onclick="saveTeacher()">💾 Save Teacher</button>
+    <div class="flex gap-2 mt-5 pt-4" style="border-top:1px solid var(--border);">
+      <button class="btn btn-primary" onclick="saveTeacher()">
+        <i class="ri-save-3-line"></i> Save Teacher
+      </button>
     </div>
   </div>
 </div>
 
-<!-- SUBJECT MODAL -->
+<!-- ── SUBJECT MODAL ─────────────────────────────────────── -->
 <div id="subjectModal" class="modal-bg hidden">
-  <div class="card p-6 w-full max-w-lg">
+  <div class="card p-6" style="width:100%;max-width:520px;">
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-bold" id="subjectModalTitle">Add Subject</h3>
-      <button class="btn btn-ghost" onclick="closeModal('subjectModal')">✕</button>
+      <h3 class="section-title" id="subjectModalTitle">Add Subject</h3>
+      <button class="btn-icon" onclick="closeModal('subjectModal')"><i class="ri-close-line"></i></button>
     </div>
     <div class="grid gap-4">
       <div class="grid grid-cols-2 gap-4">
@@ -340,7 +545,7 @@
           <select id="sType" class="input">
             <option value="theory">Theory</option>
             <option value="practical">Practical (Lab)</option>
-            <option value="activity">Activity (PE/Art/Music)</option>
+            <option value="activity">Activity (PE / Art / Music)</option>
             <option value="language">Language</option>
           </select>
         </div>
@@ -355,27 +560,30 @@
       </div>
       <div>
         <label>Alternative Subjects (Elective Group) — Multi-Select</label>
-        <div id="sElective" class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto scrollbar p-2 rounded-xl bg-slate-900/40 border border-slate-700"></div>
-        <div class="text-xs text-slate-400 mt-1">Group electives (e.g. Computer + PE + IP). Senior streams get different alternatives in the same period. Links are synced both ways automatically.</div>
+        <div id="sElective" class="grid grid-cols-2 gap-2" style="max-height:160px;overflow-y:auto;padding:10px;border-radius:var(--r-lg);background:var(--bg-alt);border:1px solid var(--border);"></div>
+        <p style="font-size:.72rem;color:var(--text-2);margin-top:6px;">Group electives (e.g. Computer + PE + IP). Links are synced both ways automatically.</p>
       </div>
       <div>
-        <label class="flex items-center gap-2 cursor-pointer normal-case">
-          <input type="checkbox" id="sTough" class="accent-indigo-500"> Mark as Tough Subject (prefer Periods 1–5)
+        <label class="flex items-center gap-2 cursor-pointer" style="text-transform:none;letter-spacing:0;font-size:.875rem;color:var(--text);">
+          <input type="checkbox" id="sTough" style="accent-color:var(--primary);">
+          Mark as Tough Subject (prefer Periods 1–5)
         </label>
       </div>
     </div>
-    <div class="flex gap-2 mt-5">
-      <button class="btn btn-primary" onclick="saveSubject()">💾 Save Subject</button>
+    <div class="flex gap-2 mt-5 pt-4" style="border-top:1px solid var(--border);">
+      <button class="btn btn-primary" onclick="saveSubject()">
+        <i class="ri-save-3-line"></i> Save Subject
+      </button>
     </div>
   </div>
 </div>
 
-<!-- CLASS MODAL -->
+<!-- ── CLASS MODAL ───────────────────────────────────────── -->
 <div id="classModal" class="modal-bg hidden">
-  <div class="card p-6 w-full max-w-lg">
+  <div class="card p-6" style="width:100%;max-width:480px;">
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-bold" id="classModalTitle">Add Class</h3>
-      <button class="btn btn-ghost" onclick="closeModal('classModal')">✕</button>
+      <h3 class="section-title" id="classModalTitle">Add Class</h3>
+      <button class="btn-icon" onclick="closeModal('classModal')"><i class="ri-close-line"></i></button>
     </div>
     <div class="grid gap-4">
       <div class="grid grid-cols-2 gap-4">
@@ -393,7 +601,7 @@
         </div>
       </div>
       <div>
-        <label>Course Stream (Only for 11th & 12th)</label>
+        <label>Course Stream <span style="text-transform:none;letter-spacing:0;font-weight:400;">(Only for 11th &amp; 12th)</span></label>
         <select id="cCourse" class="input" onchange="handleClassNameChange()" disabled>
           <option value="">— Not Applicable —</option>
           <option value="Medical">Medical (PCB)</option>
@@ -403,27 +611,34 @@
         </select>
       </div>
     </div>
-    <div class="flex gap-2 mt-5">
-      <button class="btn btn-primary" onclick="saveClass()">💾 Save Class</button>
+    <div class="flex gap-2 mt-5 pt-4" style="border-top:1px solid var(--border);">
+      <button class="btn btn-primary" onclick="saveClass()">
+        <i class="ri-save-3-line"></i> Save Class
+      </button>
     </div>
   </div>
 </div>
 
-<!-- CLASS SUBJECTS MODAL -->
+<!-- ── CLASS SUBJECTS MODAL ──────────────────────────────── -->
 <div id="classSubjectsModal" class="modal-bg hidden">
-  <div class="card p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto scrollbar">
+  <div class="card p-6" style="width:100%;max-width:900px;max-height:90vh;overflow-y:auto;">
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-bold" id="classSubjectsTitle">Manage Subjects</h3>
-      <button class="btn btn-ghost" onclick="closeModal('classSubjectsModal')">✕</button>
+      <h3 class="section-title" id="classSubjectsTitle">Manage Subjects</h3>
+      <button class="btn-icon" onclick="closeModal('classSubjectsModal')"><i class="ri-close-line"></i></button>
     </div>
     <div id="classSubjectsArea"></div>
-    <div class="flex gap-2 mt-5 flex-wrap">
-      <button class="btn btn-ghost" id="applyStreamBtn" onclick="applyStreamTemplate()" style="display:none">📋 Apply CBSE Stream Template</button>
-      <button class="btn btn-primary" onclick="saveClassSubjects()">💾 Save Mapping</button>
+    <div class="flex gap-2 mt-5 flex-wrap pt-4" style="border-top:1px solid var(--border);">
+      <button class="btn btn-ghost" id="applyStreamBtn" onclick="applyStreamTemplate()" style="display:none">
+        <i class="ri-clipboard-line"></i> Apply CBSE Stream Template
+      </button>
+      <button class="btn btn-primary" onclick="saveClassSubjects()">
+        <i class="ri-save-3-line"></i> Save Mapping
+      </button>
     </div>
   </div>
 </div>
 
+<!-- ── Toast Container ───────────────────────────────────── -->
 <div id="toastContainer"></div>
 
 <script src="app.js"></script>

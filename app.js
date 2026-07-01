@@ -11,37 +11,100 @@ load();
 const ALL_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const $ = id => document.getElementById(id);
 
+/* ── Theme ──────────────────────────────────────────────── */
+function initTheme(){
+  const saved = localStorage.getItem('tc_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  updateThemeIcon(saved);
+}
+function toggleTheme(){
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('tc_theme', next);
+  updateThemeIcon(next);
+}
+function updateThemeIcon(theme){
+  const icon = $('themeIcon');
+  if(icon) icon.className = theme === 'dark' ? 'ri-sun-line' : 'ri-moon-line';
+  const btn = $('themeToggle');
+  if(btn) btn.title = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+  // Drawer theme control
+  const dIcon = $('drawerThemeIcon');
+  if(dIcon) dIcon.className = theme === 'dark' ? 'ri-moon-clear-line' : 'ri-sun-line';
+  const dLabel = $('drawerThemeLabel');
+  if(dLabel) dLabel.textContent = theme === 'dark' ? 'Dark Mode' : 'Light Mode';
+}
+initTheme();
+
+/* ── Mobile Nav ─────────────────────────────────────────── */
+function openMobileNav(){
+  $('navDrawer').classList.add('open');
+  $('navOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeMobileNav(){
+  $('navDrawer').classList.remove('open');
+  $('navOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* ── Confirm Reset ──────────────────────────────────────── */
+function confirmReset(){
+  if(confirm('Reset all data? This cannot be undone.')){ localStorage.clear(); location.reload(); }
+}
+
+/* ── Tab Navigation ─────────────────────────────────────── */
 document.querySelectorAll('.tab[data-tab]').forEach(t=>{
   t.addEventListener('click',()=>{
+    const tabId = t.dataset.tab;
     document.querySelectorAll('.tab[data-tab]').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
+    document.querySelectorAll(`.tab[data-tab="${tabId}"]`).forEach(x=>x.classList.add('active'));
     document.querySelectorAll('.tab-content').forEach(c=>c.classList.add('hidden'));
-    $('tab-'+t.dataset.tab).classList.remove('hidden');
-    if(t.dataset.tab==='teachers') renderTeachers();
-    if(t.dataset.tab==='subjects') renderSubjects();
-    if(t.dataset.tab==='classes') renderClasses();
-    if(t.dataset.tab==='generate') renderGenerateStats();
-    if(t.dataset.tab==='view') renderViewTab();
+    $('tab-'+tabId).classList.remove('hidden');
+    if(tabId==='teachers') renderTeachers();
+    if(tabId==='subjects') renderSubjects();
+    if(tabId==='classes') renderClasses();
+    if(tabId==='generate') renderGenerateStats();
+    if(tabId==='view') renderViewTab();
   });
 });
 
+/* ── Toast ──────────────────────────────────────────────── */
+const TOAST_ICONS = {
+  success: 'ri-checkbox-circle-line',
+  error:   'ri-close-circle-line',
+  warn:    'ri-alert-line',
+  info:    'ri-information-line'
+};
 function toast(msg, type='success'){
-  const colors={success:'bg-emerald-600',error:'bg-red-600',warn:'bg-amber-600',info:'bg-indigo-600'};
-  const el=document.createElement('div');
-  el.className=`toast ${colors[type]||colors.info}`;
-  el.innerHTML=`<span>${msg}</span>`;
+  const icon = TOAST_ICONS[type] || TOAST_ICONS.info;
+  const cls  = `toast toast-${type==='error'?'error':type==='warn'?'warn':type==='info'?'info':'success'}`;
+  const el = document.createElement('div');
+  el.className = cls;
+  el.innerHTML = `<i class="${icon}"></i><div class="toast-body">${msg}</div><button class="toast-dismiss" onclick="this.closest('.toast').remove()"><i class="ri-close-line"></i></button>`;
   $('toastContainer').appendChild(el);
-  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(100%)';setTimeout(()=>el.remove(),300);},3500);
+  const remove = () => { el.classList.add('removing'); setTimeout(()=>el.remove(), 260); };
+  const timer = setTimeout(remove, 3800);
+  el.querySelector('.toast-dismiss').addEventListener('click', ()=>{ clearTimeout(timer); });
 }
+
 function closeModal(id){ $(id).classList.add('hidden'); }
-function toggleDownloadMenu(){ $('downloadMenu').classList.toggle('hidden'); }
+function toggleDownloadMenu(){
+  const m = $('downloadMenu');
+  m.classList.toggle('hidden');
+  if(!m.classList.contains('hidden')){
+    const close = e => { if(!m.contains(e.target)){ m.classList.add('hidden'); document.removeEventListener('click', close); } };
+    setTimeout(()=>document.addEventListener('click', close), 50);
+  }
+}
 
 /* SETUP */
 function renderWorkingDays(){
   $('workingDays').innerHTML = ALL_DAYS.map(d=>`
-    <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900/40 border border-slate-700 cursor-pointer hover:border-indigo-500">
-      <input type="checkbox" value="${d}" ${state.setup.workingDays.includes(d)?'checked':''} class="accent-indigo-500">
-      <span class="text-sm">${d}</span>
+    <label class="day-pill">
+      <input type="checkbox" value="${d}" ${state.setup.workingDays.includes(d)?'checked':''}>
+      <span>${d}</span>
     </label>`).join('');
 }
 function handleImageUpload(event, type){
@@ -113,19 +176,21 @@ function openTeacherModal(id){
   $('tMaxWeek').value = t?t.maxPerWeek:30;
   
   $('tSubjects').innerHTML = state.subjects.length?
-    state.subjects.map(s=>`<label class="flex items-center gap-2 text-sm p-2 rounded bg-slate-900/40 hover:bg-slate-800/60 cursor-pointer">
-      <input type="checkbox" value="${s.id}" ${t&&t.subjects.includes(s.id)?'checked':''} class="accent-indigo-500"> ${s.code} - ${s.name}</label>`).join(''):
-    '<div class="text-xs text-slate-400 col-span-3 p-2">No subjects added yet.</div>';
-    
+    state.subjects.map(s=>`<label class="check-item">
+      <input type="checkbox" value="${s.id}" ${t&&t.subjects.includes(s.id)?'checked':''}>
+      <span>${s.code} — ${s.name}</span></label>`).join(''):
+    '<div style="font-size:.8rem;color:var(--text-2);padding:.5rem;grid-column:1/-1;">No subjects added yet.</div>';
+
   $('tClasses').innerHTML = state.classes.length?
-    state.classes.map(c=>`<label class="flex items-center gap-2 text-sm p-2 rounded bg-slate-900/40 hover:bg-slate-800/60 cursor-pointer">
-      <input type="checkbox" value="${c.id}" ${t&&t.eligibleClasses&&t.eligibleClasses.includes(c.id)?'checked':''} class="accent-indigo-500"> 
-      ${c.name} ${c.section?'-'+c.section:''} ${c.course?'('+c.course+')':''}</label>`).join(''):
-    '<div class="text-xs text-slate-400 col-span-3 p-2">No classes added yet.</div>';
-    
+    state.classes.map(c=>`<label class="check-item">
+      <input type="checkbox" value="${c.id}" ${t&&t.eligibleClasses&&t.eligibleClasses.includes(c.id)?'checked':''}>
+      <span>${c.name}${c.section?' - '+c.section:''}${c.course?' ('+c.course+')':''}</span></label>`).join(''):
+    '<div style="font-size:.8rem;color:var(--text-2);padding:.5rem;grid-column:1/-1;">No classes added yet.</div>';
+
   $('tUnavailable').innerHTML = ALL_DAYS.map(d=>`
-    <label class="flex items-center gap-1 px-2 py-1.5 rounded bg-slate-900/40 border border-slate-700 cursor-pointer text-xs">
-      <input type="checkbox" value="${d}" ${t&&t.unavailableDays&&t.unavailableDays.includes(d)?'checked':''} class="accent-red-500"> ${d}
+    <label class="day-pill">
+      <input type="checkbox" value="${d}" ${t&&t.unavailableDays&&t.unavailableDays.includes(d)?'checked':''}>
+      <span>${d}</span>
     </label>`).join('');
   $('teacherModal').classList.remove('hidden');
 }
@@ -163,19 +228,21 @@ function renderTeachers(){
     const subjNames=t.subjects.map(sid=>{const s=state.subjects.find(x=>x.id===sid);return s?s.code:'';}).filter(Boolean);
     const clsNames=t.eligibleClasses&&t.eligibleClasses.length?t.eligibleClasses.map(cid=>{const c=state.classes.find(x=>x.id===cid);return c?`${c.name.replace('Class ','')}${c.section?'-'+c.section:''}`:'';}).filter(Boolean):[];
     return `<tr>
-      <td><span class="badge badge-blue">${t.id}</span></td>
+      <td><span class="badge badge-blue mono">${t.id}</span></td>
       <td><span class="badge badge-purple">${t.level||'TGT'}</span></td>
-      <td class="font-semibold">${t.name}</td>
-      <td>${subjNames.length?subjNames.map(s=>`<span class="subject-tag mr-1">${s}</span>`).join(''):'—'}</td>
-      <td class="text-xs">${clsNames.length?clsNames.join(', '):'—'}</td>
+      <td style="font-weight:600;">${t.name}</td>
+      <td>${subjNames.length?subjNames.map(s=>`<span class="subject-tag">${s}</span>`).join(''):'<span style="color:var(--muted);">—</span>'}</td>
+      <td style="font-size:.8rem;color:var(--text-2);">${clsNames.length?clsNames.join(', '):'<span style="color:var(--muted);">—</span>'}</td>
       <td><span class="badge badge-amber">${t.maxPerDay}/day</span></td>
       <td><span class="badge badge-green">${t.maxPerWeek}/wk</span></td>
       <td>
-        <button class="btn btn-primary" style="padding:.3rem .6rem" onclick="openTeacherMapping('${t.id}')">Map Classes</button>
-        <button class="btn btn-ghost" style="padding:.3rem .6rem" onclick="openTeacherModal('${t.id}')">✏️</button>
-        <button class="btn btn-danger" style="padding:.3rem .6rem" onclick="deleteTeacher('${t.id}')">🗑️</button>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="openTeacherMapping('${t.id}')"><i class="ri-map-pin-line"></i> Map</button>
+          <button class="btn-icon" onclick="openTeacherModal('${t.id}')" title="Edit"><i class="ri-edit-line"></i></button>
+          <button class="btn-icon" onclick="deleteTeacher('${t.id}')" title="Delete" style="color:var(--danger);"><i class="ri-delete-bin-line"></i></button>
+        </div>
       </td>
-    </tr>`;}).join(''): '<tr><td colspan="8" class="text-center text-slate-500 py-8">No teachers added.</td></tr>';
+    </tr>`;}).join(''): '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem;">No teachers added yet.</td></tr>';
 }
 
 let currentMappingTeacherId = null;
@@ -189,7 +256,7 @@ function openTeacherMapping(tId) {
   
   let html = '';
   if(eligibleClasses.length === 0) {
-    html = '<div class="text-slate-400 p-4 text-center">This teacher is not eligible for any classes. Please update their Teaching Level or Eligible Classes.</div>';
+    html = '<div style="color:var(--text-2);padding:1rem;text-align:center;">This teacher is not eligible for any classes. Please update their Teaching Level or Eligible Classes.</div>';
   } else {
     html = eligibleClasses.map(c => {
       let subjHtml = t.subjects.map(sid => {
@@ -197,17 +264,17 @@ function openTeacherMapping(tId) {
         if(!subj) return '';
         const classSubj = c.subjects.find(cs => cs.subjectId === sid);
         const isAssigned = classSubj && classSubj.teacherIds.includes(t.id);
-        
-        return `<label class="flex items-center gap-2 text-sm p-2 bg-slate-900/40 hover:bg-slate-800/60 rounded cursor-pointer">
-          <input type="checkbox" class="mapping-cb accent-indigo-500" data-class="${c.id}" data-subject="${sid}" ${isAssigned ? 'checked' : ''}>
-          ${subj.name} (${subj.code})
+
+        return `<label class="check-item">
+          <input type="checkbox" class="mapping-cb" data-class="${c.id}" data-subject="${sid}" ${isAssigned ? 'checked' : ''}>
+          <span>${subj.name} <span style="opacity:.6;">(${subj.code})</span></span>
         </label>`;
       }).join('');
+
+      if(!subjHtml) subjHtml = '<div style="font-size:.8rem;color:var(--muted);padding:.5rem;">No subjects assigned to this teacher in their profile.</div>';
       
-      if(!subjHtml) subjHtml = '<div class="text-xs text-slate-500 p-2">No subjects assigned to this teacher in their profile.</div>';
-      
-      return `<div class="p-4 bg-slate-800 rounded-lg border border-slate-700">
-        <div class="font-bold text-slate-200 mb-3">${c.name} ${c.section||''} ${c.course?'('+c.course+')':''}</div>
+      return `<div class="mapping-class">
+        <div style="font-weight:700;color:var(--text);margin-bottom:.75rem;">${c.name} ${c.section||''} ${c.course?'('+c.course+')':''}</div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">${subjHtml}</div>
       </div>`;
     }).join('');
@@ -267,10 +334,11 @@ function openSubjectModal(id){
   
   $('sElective').innerHTML = state.subjects.filter(x=>x.id!==id).length ?
     state.subjects.filter(x=>x.id!==id).map(x=>
-      `<label class="flex items-center gap-2 text-sm p-2 rounded bg-slate-900/40 hover:bg-slate-800/60 cursor-pointer">
-        <input type="checkbox" value="${x.id}" ${s&&s.alternativeIds&&s.alternativeIds.includes(x.id)?'checked':''} class="accent-indigo-500 s-alt-cb"> ${x.code} — ${x.name}
+      `<label class="check-item">
+        <input type="checkbox" value="${x.id}" ${s&&s.alternativeIds&&s.alternativeIds.includes(x.id)?'checked':''} class="s-alt-cb">
+        <span>${x.code} — ${x.name}</span>
       </label>`).join('') :
-    '<div class="text-xs text-slate-400 col-span-2 p-2">Add more subjects first to create elective groups.</div>';
+    '<div style="font-size:.8rem;color:var(--muted);padding:.5rem;grid-column:1/-1;">Add more subjects first to create elective groups.</div>';
   $('sTough').checked = s ? (s.tough !== false && (s.tough || isAutoToughSubject(s))) : false;
   $('sPriority').value = s && s.priority ? s.priority : 'semi-main';
   $('subjectModal').classList.remove('hidden');
@@ -347,16 +415,18 @@ function renderSubjects(){
     const subjPriority = s.priority || 'semi-main';
     const priorityBadge = subjPriority === 'main' ? '<span class="badge badge-amber">Main</span>' : (subjPriority === 'free' ? '<span class="badge badge-green">Free</span>' : '<span class="badge badge-blue">Semi-Main</span>');
     return `<tr>
-      <td><span class="badge badge-blue">${s.code}</span></td>
-      <td class="font-semibold">${s.name}</td>
+      <td><span class="badge badge-blue mono">${s.code}</span></td>
+      <td style="font-weight:600;">${s.name}</td>
       <td><span class="badge ${typeBadge}">${s.type}</span></td>
       <td>${priorityBadge}</td>
-      <td class="text-xs text-slate-300">${altNames}</td>
+      <td style="font-size:.8rem;color:var(--text-2);">${altNames}</td>
       <td>
-        <button class="btn btn-ghost" style="padding:.3rem .6rem" onclick="openSubjectModal('${s.id}')">✏️</button>
-        <button class="btn btn-danger" style="padding:.3rem .6rem" onclick="deleteSubject('${s.id}')">🗑️</button>
+        <div style="display:flex;gap:4px;">
+          <button class="btn-icon" onclick="openSubjectModal('${s.id}')" title="Edit"><i class="ri-edit-line"></i></button>
+          <button class="btn-icon" onclick="deleteSubject('${s.id}')" title="Delete" style="color:var(--danger);"><i class="ri-delete-bin-line"></i></button>
+        </div>
       </td>
-    </tr>`;}).join(''): '<tr><td colspan="6" class="text-center text-slate-500 py-8">No subjects added yet.</td></tr>';
+    </tr>`;}).join(''): '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem;">No subjects added yet.</td></tr>';
 }
 
 /* CLASSES */
@@ -441,15 +511,15 @@ function openClassSubjectsModal(clsId){
   editingIds.classSubj=clsId;
   const cls=state.classes.find(c=>c.id===clsId);
   $('classSubjectsTitle').textContent=`Subjects for ${cls.name} ${cls.section?'-'+cls.section:''} ${cls.course?'('+cls.course+')':''}`;
-  let html=`<table class="w-full text-left border-collapse mt-2">
-    <thead><tr class="border-b border-slate-700">
-      <th class="pb-2 text-slate-300">Include</th>
-      <th class="pb-2 text-slate-300">Subject</th>
-      <th class="pb-2 text-slate-300">Periods/Week</th>
-      <th class="pb-2 text-slate-300 text-center">Priority</th>
-      <th class="pb-2 text-slate-300">Eligible Teachers</th>
+  let html=`<table>
+    <thead><tr>
+      <th>Include</th>
+      <th>Subject</th>
+      <th>Periods/Week</th>
+      <th style="text-align:center;">Priority</th>
+      <th>Eligible Teachers</th>
     </tr></thead>
-    <tbody class="divide-y divide-slate-800/50">`;
+    <tbody>`;
   state.subjects.forEach(subj => {
     const mapped = cls.subjects.find(s => s.subjectId === subj.id);
     const checked = mapped ? 'checked' : '';
@@ -458,15 +528,16 @@ function openClassSubjectsModal(clsId){
     const priorityBadge = subjPriority === 'main' ? '<span class="badge badge-amber">Main</span>' : (subjPriority === 'free' ? '<span class="badge badge-green">Free</span>' : '<span class="badge badge-blue">Semi-Main</span>');
     const eligibleT = state.teachers.filter(t => t.subjects.includes(subj.id) && (!t.eligibleClasses || t.eligibleClasses.includes(cls.id)));
     const tCheckboxes = eligibleT.map(t => `
-      <label class="flex items-center gap-1 text-xs p-1.5 rounded bg-slate-900/40 cursor-pointer hover:bg-slate-800/60 transition-colors">
-        <input type="checkbox" data-subj="${subj.id}" data-tid="${t.id}" ${mapped && mapped.teacherIds.includes(t.id) ? 'checked' : ''} class="accent-indigo-500"> <span class="truncate max-w-[100px]" title="${t.name}">${t.name}</span>
+      <label class="check-item" style="font-size:.78rem;padding:.35rem .5rem;">
+        <input type="checkbox" data-subj="${subj.id}" data-tid="${t.id}" ${mapped && mapped.teacherIds.includes(t.id) ? 'checked' : ''}>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px;" title="${t.name}">${t.name}</span>
       </label>`).join('');
-    html += `<tr class="hover:bg-slate-800/20 transition-colors">
-      <td class="py-3 text-center"><input type="checkbox" data-subj="${subj.id}" class="include-cb accent-indigo-500 w-4 h-4 cursor-pointer" ${checked} onchange="toggleSubjInput(this)"></td>
-      <td class="py-3"><strong class="text-indigo-300">${subj.code}</strong> <span class="text-xs text-slate-400 block">${subj.name}</span></td>
-      <td class="py-3"><input type="number" min="0" max="15" value="${periods}" data-subj="${subj.id}" class="input w-20 periods-inp" ${mapped ? '' : 'disabled'}></td>
-      <td class="py-3 text-center">${priorityBadge}</td>
-      <td class="py-3"><div class="flex flex-wrap gap-1.5">${tCheckboxes || '<span class="text-xs text-slate-500 italic">No eligible teachers</span>'}</div></td>
+    html += `<tr>
+      <td style="text-align:center;"><input type="checkbox" data-subj="${subj.id}" class="include-cb" ${checked} onchange="toggleSubjInput(this)"></td>
+      <td><strong style="color:var(--primary-h);">${subj.code}</strong><span style="display:block;font-size:.75rem;color:var(--text-2);">${subj.name}</span></td>
+      <td><input type="number" min="0" max="15" value="${periods}" data-subj="${subj.id}" class="input periods-inp" style="width:72px;" ${mapped ? '' : 'disabled'}></td>
+      <td style="text-align:center;">${priorityBadge}</td>
+      <td><div style="display:flex;flex-wrap:wrap;gap:4px;">${tCheckboxes || '<span style="font-size:.78rem;color:var(--muted);font-style:italic;">No eligible teachers</span>'}</div></td>
     </tr>`;
   });
   html+='</tbody></table>';
@@ -549,18 +620,20 @@ function renderClasses(){
     const subjList = c.subjects.length ? c.subjects.map(s => {
       const sub = state.subjects.find(x=>x.id===s.subjectId);
       return `<span class="subject-tag mr-1 mb-1">${sub?.code}:${s.periodsPerWeek}p</span>`;
-    }).join('') : '<span class="text-slate-500">No subjects mapped</span>';
+    }).join('') : '<span style="color:var(--muted);">No subjects mapped</span>';
     return `<tr>
-      <td class="font-semibold">${c.name} ${c.section?'-'+c.section:''}</td>
-      <td>${c.course?`<span class="badge badge-purple">${c.course}</span>`:'<span class="text-slate-500">General</span>'}</td>
+      <td style="font-weight:600;">${c.name}${c.section?' - '+c.section:''}</td>
+      <td>${c.course?`<span class="badge badge-purple">${c.course}</span>`:'<span style="color:var(--muted);font-size:.85rem;">General</span>'}</td>
       <td>${subjList}</td>
-      <td>${totalPeriods} / ${slots} ${fit?'<span class="badge badge-green ml-1">OK</span>':'<span class="badge badge-red ml-1">Over</span>'}</td>
+      <td>${totalPeriods} / ${slots} ${fit?'<span class="badge badge-green" style="margin-left:4px;">OK</span>':'<span class="badge badge-red" style="margin-left:4px;">Over</span>'}</td>
       <td>
-        <button class="btn btn-primary" style="padding:.3rem .6rem" onclick="openClassSubjectsModal('${c.id}')">📚 Manage</button>
-        <button class="btn btn-ghost" style="padding:.3rem .6rem" onclick="openClassModal('${c.id}')">✏️</button>
-        <button class="btn btn-danger" style="padding:.3rem .6rem" onclick="deleteClass('${c.id}')">🗑️</button>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="openClassSubjectsModal('${c.id}')"><i class="ri-book-2-line"></i> Manage</button>
+          <button class="btn-icon" onclick="openClassModal('${c.id}')" title="Edit"><i class="ri-edit-line"></i></button>
+          <button class="btn-icon" onclick="deleteClass('${c.id}')" title="Delete" style="color:var(--danger);"><i class="ri-delete-bin-line"></i></button>
+        </div>
       </td>
-    </tr>`;}).join(''): '<tr><td colspan="5" class="text-center text-slate-500 py-8">No classes added yet.</td></tr>';
+    </tr>`;}).join(''): '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">No classes added yet.</td></tr>';
 }
 
 /* GENERATE */
@@ -609,19 +682,29 @@ function validateBeforeGeneration(){
     }
   });
   let html='';
-  if(errors.length) html+=`<div class="p-4 rounded-xl bg-red-500/10 border border-red-500/30 mb-3"><div class="font-bold text-red-300 mb-2">❌ Critical Errors:</div><ul class="list-disc list-inside text-sm space-y-1">${errors.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
-  if(teacherIssues.length) html+=`<div class="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30 mb-3"><div class="font-bold text-orange-300 mb-2">👨‍🏫 Teacher Shortage Risks:</div><ul class="list-disc list-inside text-sm space-y-1">${teacherIssues.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
-  if(warnings.length) html+=`<div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30"><div class="font-bold text-amber-300 mb-2">⚠️ Warnings:</div><ul class="list-disc list-inside text-sm space-y-1">${warnings.map(w=>`<li>${w}</li>`).join('')}</ul></div>`;
-  if(!errors.length && !warnings.length && !teacherIssues.length) html=`<div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">✅ All checks passed!</div>`;
+  if(errors.length) html+=`<div class="alert alert-error mb-3"><i class="ri-close-circle-line alert-icon"></i><div class="alert-body"><div class="alert-title">Critical Errors</div><ul>${errors.map(e=>`<li>${e}</li>`).join('')}</ul></div></div>`;
+  if(teacherIssues.length) html+=`<div class="alert alert-warn mb-3"><i class="ri-user-star-line alert-icon"></i><div class="alert-body"><div class="alert-title">Teacher Shortage Risks</div><ul>${teacherIssues.map(e=>`<li>${e}</li>`).join('')}</ul></div></div>`;
+  if(warnings.length) html+=`<div class="alert alert-warn"><i class="ri-alert-line alert-icon"></i><div class="alert-body"><div class="alert-title">Warnings</div><ul>${warnings.map(w=>`<li>${w}</li>`).join('')}</ul></div></div>`;
+  if(!errors.length && !warnings.length && !teacherIssues.length) html=`<div class="alert alert-success"><i class="ri-checkbox-circle-line alert-icon"></i><div class="alert-body"><div class="alert-title">All checks passed!</div>Ready to generate the timetable.</div></div>`;
   $('genErrors').innerHTML=html;
   $('genErrors').classList.remove('hidden');
 }
 
 function logMsg(msg,type='info'){
-  const colors={info:'text-slate-300',success:'text-emerald-400',warn:'text-amber-400',error:'text-red-400',step:'text-indigo-300 font-bold'};
+  const styles={
+    info:    'color:var(--text-2);',
+    success: 'color:var(--success);',
+    warn:    'color:var(--warn);',
+    error:   'color:var(--danger);',
+    step:    'color:var(--primary-h);font-weight:700;'
+  };
+  const icons={
+    info:'', success:'[OK] ', warn:'[WARN] ', error:'[ERR] ', step:'>> '
+  };
   const div=document.createElement('div');
-  div.className=colors[type]||colors.info;
-  div.innerHTML=msg;
+  div.style.cssText = styles[type]||styles.info;
+  const clean = msg.replace(/📚|👨‍🏫|📋|✓|✅|❌|🚀/g,'').trim();
+  div.textContent = (icons[type]||'') + clean;
   $('genLog').appendChild(div);
   $('genLog').scrollTop=$('genLog').scrollHeight;
 }
@@ -1001,20 +1084,22 @@ function renderGenSuccess(timetable, subjectPlan, isForced=false){
   });
 
   if(subjectPlan.warnings.length){
-    let warnHtml=`<div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 mb-3"><div class="font-bold text-amber-300 mb-2">⚠️ Generation Warnings:</div><ul class="list-disc list-inside text-sm space-y-1 text-amber-200">${subjectPlan.warnings.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
+    let warnHtml=`<div class="alert alert-warn mb-3"><i class="ri-alert-line alert-icon"></i><div class="alert-body"><div class="alert-title">Generation Warnings</div><ul>${subjectPlan.warnings.map(e=>`<li>${e}</li>`).join('')}</ul></div></div>`;
     $('genErrors').innerHTML = warnHtml;
     $('genErrors').classList.remove('hidden');
   }
 
-  const statusClass=isForced ? 'text-amber-300' : 'text-emerald-300';
-  const bgClass=isForced ? 'bg-amber-500/10 border-amber-500/30' : 'bg-emerald-500/10 border-emerald-500/30';
-  $('genSuccess').innerHTML=`<div class="p-4 rounded-xl ${bgClass} border">
-    <div class="font-bold ${statusClass} mb-2 text-lg">${isForced?'⚠️ Timetable Forced Generated!':'✅ Timetable Generated Successfully!'}</div>
-    <div class="text-sm space-y-1">
-      <div>Flow: Subjects assigned → Teachers assigned → Final timetable built</div>
-      <div>Empty slots: ${totalFree}</div>
-      <div>Main subjects prioritized daily · Free subjects scheduled last</div>
-      <div>Senior streams synchronized for common & elective subjects (CBSE/KVS pattern)</div>
+  const type = isForced ? 'warn' : 'success';
+  const icon = isForced ? 'ri-alert-line' : 'ri-checkbox-circle-line';
+  const title = isForced ? 'Timetable Forced Generated' : 'Timetable Generated Successfully';
+  $('genSuccess').innerHTML=`<div class="alert alert-${type}">
+    <i class="${icon} alert-icon"></i>
+    <div class="alert-body">
+      <div class="alert-title">${title}</div>
+      <div style="margin-top:.35rem;font-size:.85rem;opacity:.85;">
+        Flow: Subjects assigned → Teachers assigned → Final timetable built<br>
+        Empty slots: ${totalFree} · Main subjects prioritized · Senior streams synchronized (CBSE/KVS)
+      </div>
     </div>
   </div>`;
   $('genSuccess').classList.remove('hidden');
@@ -1037,7 +1122,7 @@ function generateTimetable(){
   if(state.subjects.length===0) errors.push('No subjects defined');
   if(days.length===0) errors.push('No working days selected');
   if(errors.length){
-    $('genErrors').innerHTML=`<div class="p-4 rounded-xl bg-red-500/10 border border-red-500/30"><div class="font-bold text-red-300 mb-2">❌ Cannot Generate:</div><ul class="list-disc list-inside text-sm">${errors.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
+    $('genErrors').innerHTML=`<div class="alert alert-error"><i class="ri-close-circle-line alert-icon"></i><div class="alert-body"><div class="alert-title">Cannot Generate</div><ul>${errors.map(e=>`<li>${e}</li>`).join('')}</ul></div></div>`;
     $('genErrors').classList.remove('hidden');
     return;
   }
@@ -1053,11 +1138,10 @@ function generateTimetable(){
     pendingSubjectPlan = subjectPlan;
     save();
 
-    let errHtml='<div class="p-4 rounded-xl bg-red-500/10 border border-red-500/30 mb-3"><div class="font-bold text-red-300 mb-2">❌ Timetable Generation Failed:</div><div class="text-xs text-red-200 mb-3">Please resolve the following shortages or constraints before generating:</div>';
-    if(subjectPlan.errors.length) errHtml+=`<div class="font-bold text-red-300 mt-2 mb-1">Subject Issues:</div><ul class="list-disc list-inside text-sm space-y-1 text-red-200">${subjectPlan.errors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
-    if(timetable.assignmentErrors.length) errHtml+=`<div class="font-bold text-orange-300 mt-3 mb-1">Teacher Issues:</div><ul class="list-disc list-inside text-sm space-y-1 text-orange-200">${timetable.assignmentErrors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
-    errHtml += '<div class="mt-4"><button class="btn btn-warn" onclick="forceGenerateTimetable()">⚠️ Force Build Anyway</button></div>';
-    errHtml += '</div>';
+    let errHtml = `<div class="alert alert-error mb-3"><i class="ri-close-circle-line alert-icon"></i><div class="alert-body"><div class="alert-title">Timetable Generation Failed</div><p style="font-size:.8rem;opacity:.8;margin:.3rem 0;">Resolve the following issues before generating:</p>`;
+    if(subjectPlan.errors.length) errHtml+=`<div style="font-weight:700;margin-top:.6rem;margin-bottom:.3rem;">Subject Issues:</div><ul>${subjectPlan.errors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+    if(timetable.assignmentErrors.length) errHtml+=`<div style="font-weight:700;margin-top:.6rem;margin-bottom:.3rem;color:var(--warn);">Teacher Issues:</div><ul>${timetable.assignmentErrors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+    errHtml += `</div></div><div style="margin-top:.75rem;"><button class="btn btn-warn" onclick="forceGenerateTimetable()"><i class="ri-alert-line"></i> Force Build Anyway</button></div>`;
     
     $('genErrors').innerHTML=errHtml;
     $('genErrors').classList.remove('hidden');
@@ -1071,7 +1155,7 @@ function generateTimetable(){
 /* VIEW & DOWNLOADS */
 let currentViewMode='class', currentViewId=null;
 function renderViewTab(){
-  if(!state.timetable){ $('timetableRender').innerHTML='<div class="text-center text-slate-500 py-12">No timetable generated yet.</div>'; return; }
+  if(!state.timetable){ $('timetableRender').innerHTML=`<div style="text-align:center;padding:3rem;color:var(--muted);"><i class="ri-layout-grid-line" style="font-size:3rem;display:block;margin-bottom:.75rem;opacity:.4;"></i>No timetable generated yet.</div>`; return; }
   switchView(currentViewMode);
 }
 function switchView(mode){
@@ -1098,25 +1182,28 @@ function switchView(mode){
 
 function renderHistory(){
   if(!state.history || state.history.length===0){
-    $('timetableRender').innerHTML='<div class="text-center text-slate-500 py-12">No history available.</div>';
+    $('timetableRender').innerHTML=`<div style="text-align:center;padding:3rem;color:var(--muted);"><i class="ri-history-line" style="font-size:3rem;display:block;margin-bottom:.75rem;opacity:.4;"></i>No history available.</div>`;
     return;
   }
   let html = `<div class="card p-5">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="text-xl font-bold">Timetable Build History</h3>
-      <button class="btn btn-danger text-sm px-3 py-1" onclick="clearAllHistory()">🗑️ Clear All History</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px;">
+      <div>
+        <h3 class="section-title">Build History</h3>
+        <p class="section-subtitle">Restore a previous timetable version</p>
+      </div>
+      <button class="btn btn-danger-outline btn-sm" onclick="clearAllHistory()"><i class="ri-delete-bin-line"></i> Clear All</button>
     </div>
-    <div class="space-y-3">`;
+    <div style="display:flex;flex-direction:column;gap:8px;">`;
   state.history.forEach((h, i) => {
     const d = new Date(h.timestamp).toLocaleString();
-    html += `<div class="p-3 bg-slate-800 rounded-lg flex justify-between items-center border border-slate-700 flex-wrap gap-2">
+    html += `<div class="history-entry">
       <div>
-        <div class="font-semibold text-slate-200">Build at ${d}</div>
-        <div class="text-xs text-slate-400">Total Classes: ${Object.keys(h.timetable.classes).length}</div>
+        <div style="font-weight:600;color:var(--text);">Build · ${d}</div>
+        <div style="font-size:.78rem;color:var(--text-2);margin-top:2px;"><i class="ri-graduation-cap-line" style="font-size:12px;"></i> ${Object.keys(h.timetable.classes).length} classes</div>
       </div>
-      <div class="flex gap-2">
-        <button class="btn btn-primary text-sm px-3 py-1" onclick="restoreHistory(${i})">Load</button>
-        <button class="btn btn-danger text-sm px-3 py-1" onclick="deleteHistory(${i})">🗑️ Delete</button>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-primary btn-sm" onclick="restoreHistory(${i})"><i class="ri-history-line"></i> Restore</button>
+        <button class="btn-icon" onclick="deleteHistory(${i})" title="Delete" style="color:var(--danger);"><i class="ri-delete-bin-line"></i></button>
       </div>
     </div>`;
   });
@@ -1172,7 +1259,7 @@ function isTeacherEligibleForClass(teacher, cls) {
 let editModeActive = false;
 function toggleEditMode(){
   editModeActive = !editModeActive;
-  $('editModeBtn').innerHTML = editModeActive ? '✏️ Edit Mode: ON' : '✏️ Edit Mode: OFF';
+  $('editModeBtn').innerHTML = `<i class="ri-edit-line"></i> Edit Mode: ${editModeActive ? 'ON' : 'OFF'}`;
   $('editModeBtn').classList.toggle('btn-warn', editModeActive);
   $('editModeBtn').classList.toggle('btn-ghost', !editModeActive);
   renderTimetable();
@@ -1210,19 +1297,16 @@ function openEditSlotModal(d, p){
       const subjCodes = subjIds.map(sid => state.subjects.find(s=>s.id===sid)?.code).filter(Boolean).join(', ') || 'No Subjects';
       
       const existingT = state.timetable.teachers[tid]?.[d]?.[p];
-      let badge = '<span class="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-300 ml-2">Available</span>';
-      
+      let badge = '<span class="slot-avail">Available</span>';
+
       if(existingT && existingT.classId && existingT.classId !== currentViewId) {
         const conflictingClass = state.classes.find(cc => cc.id === existingT.classId);
         const className = conflictingClass ? `${conflictingClass.name} ${conflictingClass.section||''}` : '';
-        badge = `<span class="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-300 ml-2 cursor-pointer" onclick="event.stopPropagation(); showInfoModal('Teacher Unavailable', 'Teacher ${t.name} is busy with class ${className} at this time.')">Busy</span>`;
+        badge = `<span class="slot-busy" onclick="event.stopPropagation(); showInfoModal('Teacher Unavailable', 'Teacher ${t.name} is busy with class ${className} at this time.')">Busy</span>`;
       }
-      
-      htmlOpts += `<div class="p-2 bg-slate-800 rounded flex justify-between items-center cursor-pointer hover:bg-slate-700 mb-2" onclick="editSlotStep2('${tid}', null, '${subjIds.join(',')}')">
-        <div>
-          <div class="font-bold">${t.name}</div>
-          <div class="text-xs text-slate-400">Subjects: ${subjCodes}</div>
-        </div>
+
+      htmlOpts += `<div class="slot-option" onclick="editSlotStep2('${tid}', null, '${subjIds.join(',')}')">
+        <div><div class="slot-option-name">${t.name}</div><div class="slot-option-sub">Subjects: ${subjCodes}</div></div>
         <div>${badge}</div>
       </div>`;
     });
@@ -1240,42 +1324,40 @@ function openEditSlotModal(d, p){
       const subjCodes = subjIds.map(sid => state.subjects.find(s=>s.id===sid)?.code).filter(Boolean).join(', ') || 'No Subjects';
       
       const existingC = state.timetable.classes[c.id]?.[d]?.[p];
-      let badge = '<span class="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-300 ml-2">Available</span>';
+      let badge = '<span class="slot-avail">Available</span>';
       if(existingC && existingC.teacherId && existingC.teacherId !== currentViewId) {
         const conflictingTeacher = state.teachers.find(tt => tt.id === existingC.teacherId);
         const teacherName = conflictingTeacher ? conflictingTeacher.name : '';
-        badge = `<span class="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-300 ml-2 cursor-pointer" onclick="event.stopPropagation(); showInfoModal('Class Unavailable', 'Class ${c.name} ${c.section||''} is busy with teacher ${teacherName} at this time.')">Busy</span>`;
+        badge = `<span class="slot-busy" onclick="event.stopPropagation(); showInfoModal('Class Unavailable', 'Class ${c.name} ${c.section||''} is busy with teacher ${teacherName} at this time.')">Busy</span>`;
       }
-      
-      htmlOpts += `<div class="p-2 bg-slate-800 rounded flex justify-between items-center cursor-pointer hover:bg-slate-700 mb-2" onclick="editSlotStep2(null, '${c.id}', '${subjIds.join(',')}')">
-        <div>
-          <div class="font-bold">${c.name} ${c.section||''}</div>
-          <div class="text-xs text-slate-400">Subjects: ${subjCodes}</div>
-        </div>
+
+      htmlOpts += `<div class="slot-option" onclick="editSlotStep2(null, '${c.id}', '${subjIds.join(',')}')">
+        <div><div class="slot-option-name">${c.name} ${c.section||''}</div><div class="slot-option-sub">Subjects: ${subjCodes}</div></div>
         <div>${badge}</div>
       </div>`;
     });
   }
   
-  $('editSlotOptions').innerHTML = htmlOpts || '<div class="text-slate-400">No options available.</div>';
+  $('editSlotOptions').innerHTML = htmlOpts || '<div style="color:var(--text-2);">No options available.</div>';
   $('editSlotModal').classList.remove('hidden');
 }
 
 function editSlotStep2(tId, cId, subjIdsStr) {
   const subjIds = subjIdsStr ? subjIdsStr.split(',') : [];
-  let html = `<div class="mb-3 flex items-center gap-2">
-    <button class="btn btn-ghost btn-sm px-2 py-1" onclick="openEditSlotModal($('editSlotD').value, $('editSlotP').value)">⬅ Back</button>
-    <div class="font-bold text-sm">Select Subject</div>
+  let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem;">
+    <button class="btn btn-ghost btn-sm" onclick="openEditSlotModal($('editSlotD').value, $('editSlotP').value)"><i class="ri-arrow-left-line"></i> Back</button>
+    <div style="font-weight:700;font-size:.875rem;">Select Subject</div>
   </div>`;
-  
+
   if(subjIds.length === 0) {
-    html += `<div class="text-xs text-slate-400">No subjects available to assign.</div>`;
+    html += `<div style="font-size:.85rem;color:var(--muted);">No subjects available to assign.</div>`;
   } else {
     subjIds.forEach(sid => {
       const subj = state.subjects.find(s => s.id === sid);
       if(!subj) return;
-      html += `<div class="p-3 bg-slate-800 rounded cursor-pointer hover:bg-slate-700 mb-2 border border-slate-700" onclick="applySlotEdit('${sid}', ${tId ? `'${tId}'` : 'null'}, ${cId ? `'${cId}'` : 'null'})">
-        <div class="font-bold">${subj.name} <span class="text-xs text-slate-400">(${subj.code})</span></div>
+      html += `<div class="slot-option" onclick="applySlotEdit('${sid}', ${tId ? `'${tId}'` : 'null'}, ${cId ? `'${cId}'` : 'null'})">
+        <div><div class="slot-option-name">${subj.name}</div><div class="slot-option-sub">${subj.code} · ${subj.type}</div></div>
+        <i class="ri-arrow-right-s-line" style="color:var(--muted);font-size:18px;"></i>
       </div>`;
     });
   }
@@ -1338,44 +1420,44 @@ function renderTimetable(){
     grid=state.timetable.teachers[t.id];
   }
   let html=`<div class="card p-5">
-    <div class="mb-4">
-      <h3 class="text-xl font-bold">${title}</h3>
-      <p class="text-sm text-slate-400">${subtitle}</p>
-      <p class="text-xs text-slate-500 mt-1">${state.setup.schoolName||'School'} · ${state.setup.academicYear||''}</p>
+    <div style="margin-bottom:1.25rem;">
+      <h3 class="section-title">${title}</h3>
+      <p class="section-subtitle">${subtitle}</p>
+      <p style="font-size:.75rem;color:var(--muted);margin-top:4px;">${state.setup.schoolName||'School'} · ${state.setup.academicYear||''}</p>
     </div>
     <div class="overflow-x-auto scrollbar">
       <table class="border-collapse" style="min-width:800px">
         <thead><tr>
-          <th style="width:80px">Day</th>
+          <th style="width:72px;">Day</th>
           ${Array.from({length:periods},(_,i)=>{
-            let s = `<th class="text-center">P${i+1}</th>`;
-            if (i+1 === state.setup.breakAfter && i+1 < periods) s += `<th class="text-center bg-slate-800 text-slate-400">RECESS</th>`;
+            let s = `<th style="text-align:center;">P${i+1}</th>`;
+            if (i+1 === state.setup.breakAfter && i+1 < periods) s += `<th style="text-align:center;background:var(--bg-alt);color:var(--muted);font-size:.65rem;letter-spacing:.1em;">RECESS</th>`;
             return s;
           }).join('')}
         </tr></thead>
         <tbody>`;
   for(let d=0; d<days.length; d++){
-    html+=`<tr><td class="font-bold text-center bg-indigo-500/10">${days[d]}</td>`;
+    html+=`<tr><td><div class="day-cell">${days[d]}</div></td>`;
     for(let p=0; p<periods; p++){
       const slot=grid[d][p];
       let content='', cls='timetable-cell';
-      if(!slot){ content='<div class="text-red-400 text-center font-bold">EMPTY</div>'; cls+=' bg-red-500/10'; }
-      else if(slot.unassigned || (currentViewMode==='class' && !slot.teacherId) || (currentViewMode==='teacher' && !slot.classId)){ 
-        const subj=state.subjects.find(s=>s.id===slot.subjectId); 
+      if(!slot){ content='<div class="cell-empty">EMPTY</div>'; cls+=' bg-red-500/10'; }
+      else if(slot.unassigned || (currentViewMode==='class' && !slot.teacherId) || (currentViewMode==='teacher' && !slot.classId)){
+        const subj=state.subjects.find(s=>s.id===slot.subjectId);
         let txt = currentViewMode==='class' ? 'No Teacher' : 'No Class';
-        content=`<div class="font-bold text-amber-300">${subj?.code||''}</div><div class="text-xs text-red-400">${txt}</div>`; 
-        cls+=' filled'; 
+        content=`<div class="cell-warn">${subj?.code||''}</div><div class="cell-warn-sub">${txt}</div>`;
+        cls+=' filled';
       }
-      else if(slot.free){ content='<div class="text-red-400 text-center font-bold">FREE</div>'; cls+=' bg-red-500/10'; }
+      else if(slot.free){ content='<div class="cell-empty">FREE</div>'; cls+=' bg-red-500/10'; }
       else if(currentViewMode==='class'){
         const subj=state.subjects.find(s=>s.id===slot.subjectId);
         const t=state.teachers.find(x=>x.id===slot.teacherId);
-        content=`<div class="font-bold text-indigo-300">${subj?.code||''}</div><div class="text-xs text-slate-400">${t?.name||''}</div>`;
+        content=`<div class="cell-subject">${subj?.code||''}</div><div class="cell-teacher">${t?.name||''}</div>`;
         cls+=' filled';
       } else {
         const c=state.classes.find(x=>x.id===slot.classId);
         const subj=state.subjects.find(s=>s.id===slot.subjectId);
-        content=`<div class="font-bold text-purple-300">${c?.name||''} ${c?.section||''}</div><div class="text-xs text-slate-400">${subj?.code||''}</div>`;
+        content=`<div class="cell-class">${c?.name||''} ${c?.section||''}</div><div class="cell-teacher">${subj?.code||''}</div>`;
         cls+=' filled';
       }
       const clickAttr = editModeActive ? `onclick="openEditSlotModal(${d}, ${p})" style="cursor:pointer; border:1px dashed #64748b;"` : '';
@@ -1383,7 +1465,7 @@ function renderTimetable(){
       
       if(p+1 === state.setup.breakAfter && p+1 < periods) {
         if(d === 0) {
-          html+=`<td rowspan="${days.length}" class="bg-slate-800 text-slate-400 font-bold text-center tracking-widest p-0" style="width:40px;"><div style="writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); margin:auto; letter-spacing: 4px;">RECESS</div></td>`;
+          html+=`<td rowspan="${days.length}" style="background:var(--bg-alt);color:var(--muted);font-weight:700;text-align:center;letter-spacing:4px;padding:0;width:40px;"><div style="writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);margin:auto;letter-spacing:4px;font-size:.7rem;">RECESS</div></td>`;
         }
       }
     }
@@ -1409,7 +1491,7 @@ function addPdfHeader(doc, title, subtitle, loadLine){
   doc.setFont(undefined,'normal');
   doc.text(title,textX,headerY+36);
   const lineY=headerY+logoSize+8;
-  doc.setDrawColor(99,102,241);
+  doc.setDrawColor(242,97,63);
   doc.setLineWidth(1);
   doc.line(40,lineY,pageWidth-40,lineY);
   let curY=lineY+18;
@@ -1521,7 +1603,7 @@ function downloadCurrentPDF(){
     return row;
   });
   const startY=addPdfHeader(doc, title, subtitle, loadLine);
-  doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:8,cellPadding:6,lineWidth:0.5,lineColor:[100,100,100]}, headStyles:{fillColor:[99,102,241],textColor:255,fontSize:9}, columnStyles:{0:{fillColor:[241,245,249],textColor:[15,23,42],fontStyle:'bold',cellWidth:50}}});
+  doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:8,cellPadding:6,lineWidth:0.5,lineColor:[100,100,100]}, headStyles:{fillColor:[242,97,63],textColor:255,fontSize:9}, columnStyles:{0:{fillColor:[255,206,153],textColor:[86,47,0],fontStyle:'bold',cellWidth:50}}});
   addPdfSignature(doc);
   doc.save(`${title.replace(/[^a-z0-9]/gi,'_')}.pdf`);
   toast('PDF downloaded!');
@@ -1559,7 +1641,7 @@ function downloadAllClassPDF(){
       } 
       return row; 
     });
-    doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:7,cellPadding:4}, headStyles:{fillColor:[99,102,241],textColor:255}, columnStyles:{0:{cellWidth:40,fontStyle:'bold'}}});
+    doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:7,cellPadding:4}, headStyles:{fillColor:[242,97,63],textColor:255}, columnStyles:{0:{cellWidth:40,fontStyle:'bold'}}});
     addPdfSignature(doc);
   });
   doc.save('All_Class_Timetables.pdf');
@@ -1596,7 +1678,7 @@ function downloadAllTeacherPDF(){
       } 
       return row; 
     });
-    doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:7,cellPadding:4}, headStyles:{fillColor:[139,92,246],textColor:255}, columnStyles:{0:{cellWidth:40,fontStyle:'bold'}}});
+    doc.autoTable({head, body, startY, theme:'grid', didDrawPage: getPdfFooterHook(doc), styles:{fontSize:7,cellPadding:4}, headStyles:{fillColor:[155,57,34],textColor:255}, columnStyles:{0:{cellWidth:40,fontStyle:'bold'}}});
     addPdfSignature(doc);
   });
   doc.save('All_Teacher_Timetables.pdf');
