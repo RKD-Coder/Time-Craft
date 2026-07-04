@@ -799,10 +799,10 @@ input[type="file"].input::file-selector-button:hover {
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-lg);
   z-index: 200;
-  max-height: 240px;
-  overflow-y: auto;
-  padding: .35rem;
-  scrollbar-width: thin;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   opacity: 0;
   transform: translateY(-6px) scale(.98);
   transition: opacity var(--dur-md) var(--ease-spring), transform var(--dur-md) var(--ease-spring);
@@ -813,6 +813,46 @@ input[type="file"].input::file-selector-button:hover {
   opacity: 1;
   transform: translateY(0) scale(1);
   pointer-events: all;
+}
+
+/* Search box pinned to the top of the dropdown — stays put while the
+   option list below it scrolls independently. */
+.cs-search-wrap {
+  flex-shrink: 0;
+  padding: .5rem .6rem;
+  border-bottom: 1.5px solid var(--border);
+}
+
+.cs-search-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: var(--bg-alt);
+  color: var(--text);
+  font-size: .82rem;
+  font-family: 'Inter', sans-serif;
+  padding: .4rem .6rem;
+  border-radius: var(--r);
+}
+
+.cs-search-input::placeholder {
+  color: var(--muted);
+}
+
+.cs-options-list {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding: .35rem;
+  scrollbar-width: thin;
+}
+
+.cs-no-match {
+  padding: .6rem .85rem;
+  font-size: .82rem;
+  color: var(--muted);
+  text-align: center;
+  font-style: italic;
 }
 
 .cs-option {
@@ -858,6 +898,202 @@ input[type="file"].input::file-selector-button:hover {
 }
 
 [data-theme="light"] .cs-option.selected {
+  color: var(--primary-h);
+}
+
+/* ── Multi-Select Dropdown ─────────────────────────────────────
+   Same visual language as .cs-wrap, but selection doesn't close
+   the dropdown, and a clean text summary renders below the trigger. */
+.ms-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.ms-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .65rem .9rem;
+  background: var(--bg-alt);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  color: var(--text);
+  font-size: .875rem;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+.ms-display:hover {
+  border-color: var(--primary);
+  background: var(--card);
+}
+
+.ms-wrap.open .ms-display {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-glow);
+  background: var(--card);
+}
+
+.ms-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-value.ms-placeholder-text {
+  color: var(--muted);
+}
+
+.ms-arrow {
+  font-size: 18px;
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: transform var(--dur) var(--ease);
+}
+
+.ms-wrap.open .ms-arrow {
+  transform: rotate(180deg);
+  color: var(--primary);
+}
+
+.ms-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+  max-height: 240px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-6px) scale(.98);
+  transition: opacity var(--dur-md) var(--ease-spring), transform var(--dur-md) var(--ease-spring);
+  pointer-events: none;
+}
+
+.ms-wrap.open .ms-dropdown {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: all;
+}
+
+.ms-search-wrap {
+  flex-shrink: 0;
+  padding: .5rem .6rem;
+  border-bottom: 1.5px solid var(--border);
+}
+
+.ms-search-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: var(--bg-alt);
+  color: var(--text);
+  font-size: .82rem;
+  font-family: 'Inter', sans-serif;
+  padding: .4rem .6rem;
+  border-radius: var(--r);
+}
+
+.ms-search-input::placeholder {
+  color: var(--muted);
+}
+
+.ms-options-list {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding: .35rem;
+  scrollbar-width: thin;
+}
+
+.ms-no-match {
+  padding: .6rem .85rem;
+  font-size: .82rem;
+  color: var(--muted);
+  text-align: center;
+  font-style: italic;
+}
+
+.ms-option {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .55rem .7rem;
+  border-radius: var(--r);
+  font-size: .875rem;
+  cursor: pointer;
+  color: var(--text-2);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.ms-option:hover {
+  background: var(--primary-dim);
+  color: var(--text);
+}
+
+.ms-option input[type="checkbox"] {
+  accent-color: var(--primary);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.ms-option:has(input:checked) {
+  background: var(--primary-dim);
+  color: var(--primary-h);
+  font-weight: 600;
+}
+
+/* Clean-text summary of current selection, shown below the trigger */
+.ms-summary {
+  margin-top: .5rem;
+  font-size: .78rem;
+  color: var(--text-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+
+.ms-summary em {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.ms-tag {
+  background: var(--primary-dim);
+  color: var(--primary-h);
+  padding: .25rem .55rem;
+  border-radius: var(--r);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+[data-theme="light"] .ms-display {
+  background: #F2F0EC;
+  border-color: #E5E0D6;
+  border-radius: 12px;
+}
+
+[data-theme="light"] .ms-display:hover,
+[data-theme="light"] .ms-wrap.open .ms-display {
+  background: #fff;
+  border-color: var(--primary);
+}
+
+[data-theme="light"] .ms-dropdown {
+  border-radius: 14px;
+}
+
+[data-theme="light"] .ms-option:has(input:checked) {
   color: var(--primary-h);
 }
 
@@ -1909,6 +2145,69 @@ tbody tr:hover {
   border-top: 1.5px solid var(--border);
   margin-top: 1.5rem;
   padding-top: 1.25rem;
+}
+
+/* ── Table search + column filter toolbar ─────────────────── */
+.table-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 200px;
+  background: var(--bg-alt);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: .6rem .85rem;
+  transition: border-color var(--dur) var(--ease);
+}
+
+.search-box:focus-within {
+  border-color: var(--primary);
+}
+
+.search-box i {
+  color: var(--muted);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: .875rem;
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+}
+
+.search-input::placeholder {
+  color: var(--muted);
+}
+
+.search-col-select {
+  max-width: 200px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-col-select {
+    max-width: none;
+    width: 100%;
+  }
 }
 
 /* ── Responsive helpers ────────────────────────────────────── */

@@ -8,6 +8,23 @@ function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 function load(){ const s=localStorage.getItem(STORAGE_KEY); if(s){ try{ state={...state, ...JSON.parse(s)}; }catch(e){} } }
 load();
 
+// ── One-time data migrations (keep older saved states working) ──────────
+(function migrateState(){
+  (state.subjects||[]).forEach(s=>{
+    if(!Array.isArray(s.types) || !s.types.length){
+      s.types = [s.type || 'theory'];
+    }
+    s.type = s.types[0]; // keep legacy singular field in sync for any stray reader
+  });
+  (state.classes||[]).forEach(c=>{
+    if(c.maxPeriodsPerWeek==null || isNaN(c.maxPeriodsPerWeek)){
+      c.maxPeriodsPerWeek = 48;
+    } else {
+      c.maxPeriodsPerWeek = Math.min(Math.max(parseInt(c.maxPeriodsPerWeek)||48,1),48);
+    }
+  });
+})();
+
 const ALL_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const $ = id => document.getElementById(id);
 
@@ -236,13 +253,61 @@ function initCustomSelects(root = document) {
     display.innerHTML = '<span class="cs-value"></span><i class="ri-arrow-down-s-line cs-arrow"></i>';
     wrap.appendChild(display);
 
-    // Dropdown list
+    // Dropdown list — search box (sticky) + separately-scrolling option list
     const dropdown = document.createElement('div');
     dropdown.className = 'cs-dropdown';
     wrap.appendChild(dropdown);
 
+    const SEARCH_THRESHOLD = 6; // small selects (e.g. Priority) skip the search box
+    let searchWrap = null, searchInput = null;
+    const optionsList = document.createElement('div');
+    optionsList.className = 'cs-options-list';
+    dropdown.appendChild(optionsList);
+
+    // Re-evaluated on every buildOptions() call (not just once) — selects
+    // like #viewSelect get their options fully replaced with a differently-
+    // sized list (classes vs teachers) after init, so whether the search box
+    // should exist can change from one rebuild to the next.
+    function ensureSearchBox() {
+      if (sel.options.length <= SEARCH_THRESHOLD) {
+        if (searchWrap) { searchWrap.remove(); searchWrap = null; searchInput = null; }
+        return;
+      }
+      if (searchWrap) return;
+      searchWrap = document.createElement('div');
+      searchWrap.className = 'cs-search-wrap';
+      searchInput = document.createElement('input');
+      searchInput.type = 'text';
+      searchInput.className = 'cs-search-input';
+      searchInput.placeholder = 'Search…';
+      searchInput.addEventListener('click', e => e.stopPropagation());
+      searchInput.addEventListener('input', () => filterOptions(searchInput.value));
+      searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDropdown(); } });
+      searchWrap.appendChild(searchInput);
+      dropdown.insertBefore(searchWrap, optionsList);
+    }
+
+    function filterOptions(q) {
+      q = (q || '').trim().toLowerCase();
+      let anyVisible = false;
+      optionsList.querySelectorAll('.cs-option').forEach(item => {
+        const match = !q || item.textContent.toLowerCase().includes(q);
+        item.style.display = match ? '' : 'none';
+        if (match) anyVisible = true;
+      });
+      let empty = optionsList.querySelector('.cs-no-match');
+      if (!anyVisible) {
+        if (!empty) {
+          empty = document.createElement('div');
+          empty.className = 'cs-no-match';
+          empty.textContent = 'No matches';
+          optionsList.appendChild(empty);
+        }
+      } else if (empty) empty.remove();
+    }
+
     function buildOptions() {
-      dropdown.innerHTML = '';
+      optionsList.innerHTML = '';
       [...sel.options].forEach((opt, i) => {
         const item = document.createElement('div');
         item.className = 'cs-option' + (opt.selected ? ' selected' : '') + (opt.disabled ? ' disabled' : '');
@@ -258,15 +323,16 @@ function initCustomSelects(root = document) {
             closeDropdown();
           });
         }
-        dropdown.appendChild(item);
+        optionsList.appendChild(item);
       });
+      ensureSearchBox();
     }
 
     function syncDisplay() {
       const opt = sel.options[sel.selectedIndex];
       display.querySelector('.cs-value').textContent = opt ? opt.text : '';
       display.setAttribute('data-disabled', sel.disabled ? 'true' : 'false');
-      dropdown.querySelectorAll('.cs-option').forEach((item, i) => {
+      optionsList.querySelectorAll('.cs-option').forEach((item, i) => {
         item.classList.toggle('selected', i === sel.selectedIndex);
       });
     }
@@ -277,8 +343,9 @@ function initCustomSelects(root = document) {
       document.querySelectorAll('.cs-wrap.open').forEach(w => w.classList.remove('open'));
       buildOptions();
       wrap.classList.add('open');
+      if (searchInput) { searchInput.value = ''; filterOptions(''); setTimeout(() => searchInput.focus(), 0); }
       // Scroll selected into view
-      const sel_item = dropdown.querySelector('.cs-option.selected');
+      const sel_item = optionsList.querySelector('.cs-option.selected');
       if (sel_item) sel_item.scrollIntoView({ block: 'nearest' });
     }
 
@@ -308,6 +375,111 @@ function initCustomSelects(root = document) {
     document._csOutsideClickBound = true;
     document.addEventListener('click', () => {
       document.querySelectorAll('.cs-wrap.open').forEach(w => w.classList.remove('open'));
+    });
+  }
+}
+
+/* ── Multi-Select Dropdown ─────────────────────────────────────
+   Renders a checkbox list (items) into containerId as a dropdown
+   that stays open while (de)selecting, and shows a clean comma/tag
+   summary of the current selection below the trigger.
+   items: [{value, label, checked, cbClass}]
+───────────────────────────────────────────────────────────── */
+function buildMultiSelect(containerId, items, opts = {}) {
+  const container = $(containerId);
+  if (!container) return;
+  container.classList.add('ms-wrap');
+  container.classList.remove('open');
+  const placeholder = opts.placeholder || 'Select…';
+
+  if (!items.length) {
+    container.innerHTML = `<div style="font-size:.8rem;color:var(--text-2);padding:.5rem;">${opts.emptyMsg || 'No options available.'}</div>`;
+    return;
+  }
+
+  const SEARCH_THRESHOLD = 6;
+  const optsHtml = items.map(it => `
+      <label class="ms-option" data-label="${it.label}">
+        <input type="checkbox" class="${it.cbClass || ''}" value="${it.value}" ${it.checked ? 'checked' : ''}>
+        <span>${it.label}</span>
+      </label>`).join('');
+
+  container.innerHTML = `
+    <div class="ms-display"><span class="ms-value"></span><i class="ri-arrow-down-s-line ms-arrow"></i></div>
+    <div class="ms-dropdown">
+      ${items.length > SEARCH_THRESHOLD ? '<div class="ms-search-wrap"><input type="text" class="ms-search-input" placeholder="Search…"></div>' : ''}
+      <div class="ms-options-list">${optsHtml}</div>
+    </div>
+    <div class="ms-summary"></div>`;
+
+  bindMultiSelect(container, placeholder);
+}
+
+function bindMultiSelect(container, placeholder) {
+  const display = container.querySelector('.ms-display');
+  const valueEl = container.querySelector('.ms-value');
+  const dropdown = container.querySelector('.ms-dropdown');
+  const optionsList = container.querySelector('.ms-options-list');
+  const searchInput = container.querySelector('.ms-search-input');
+  const summary = container.querySelector('.ms-summary');
+
+  function refresh() {
+    const checked = [...optionsList.querySelectorAll('input[type="checkbox"]:checked')];
+    if (checked.length) {
+      valueEl.textContent = checked.length === 1 ? checked[0].closest('.ms-option').dataset.label : checked.length + ' selected';
+      valueEl.classList.remove('ms-placeholder-text');
+    } else {
+      valueEl.textContent = placeholder;
+      valueEl.classList.add('ms-placeholder-text');
+    }
+    summary.innerHTML = checked.length ?
+      checked.map(cb => `<span class="ms-tag">${cb.closest('.ms-option').dataset.label}</span>`).join('') :
+      '<em>None selected</em>';
+  }
+  container._msRefresh = refresh;
+
+  optionsList.addEventListener('change', e => {
+    if (e.target.matches('input[type="checkbox"]')) refresh();
+  });
+
+  if (searchInput) {
+    searchInput.addEventListener('click', e => e.stopPropagation());
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      let any = false;
+      optionsList.querySelectorAll('.ms-option').forEach(opt => {
+        const match = !q || opt.textContent.toLowerCase().includes(q);
+        opt.style.display = match ? '' : 'none';
+        if (match) any = true;
+      });
+      let empty = optionsList.querySelector('.ms-no-match');
+      if (!any) {
+        if (!empty) {
+          empty = document.createElement('div');
+          empty.className = 'ms-no-match';
+          empty.textContent = 'No matches';
+          optionsList.appendChild(empty);
+        }
+      } else if (empty) empty.remove();
+    });
+  }
+
+  display.addEventListener('click', e => {
+    e.stopPropagation();
+    const isOpen = container.classList.contains('open');
+    document.querySelectorAll('.ms-wrap.open').forEach(w => { if (w !== container) w.classList.remove('open'); });
+    container.classList.toggle('open', !isOpen);
+    if (!isOpen && searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); setTimeout(() => searchInput.focus(), 0); }
+  });
+
+  dropdown.addEventListener('click', e => e.stopPropagation());
+
+  refresh();
+
+  if (!document._msOutsideClickBound) {
+    document._msOutsideClickBound = true;
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.ms-wrap.open').forEach(w => w.classList.remove('open'));
     });
   }
 }
@@ -371,12 +543,40 @@ function clampMaxPerDay(el){
   const v=parseInt(el.value);
   if(!isNaN(v) && v>8) el.value=8;
 }
+function clampMaxPerWeek(el){
+  const v=parseInt(el.value);
+  if(isNaN(v)) return;
+  if(v>48) el.value=48;
+  else if(v<1) el.value=1;
+}
+function filterMappingClasses(){
+  const q=($('teacherMappingSearch')?.value||'').trim().toLowerCase();
+  const blocks=document.querySelectorAll('#teacherMappingArea .mapping-class');
+  let anyVisible=false;
+  blocks.forEach(b=>{
+    const match=!q || (b.dataset.search||'').includes(q);
+    b.style.display=match?'':'none';
+    if(match) anyVisible=true;
+  });
+  let empty=document.querySelector('#teacherMappingArea .mapping-no-results');
+  if(blocks.length && !anyVisible){
+    if(!empty){
+      empty=document.createElement('div');
+      empty.className='mapping-no-results';
+      empty.style.cssText='text-align:center;color:var(--muted);padding:1rem;';
+      empty.textContent='No classes/subjects match your search.';
+      $('teacherMappingArea').appendChild(empty);
+    }
+  } else if(empty) empty.remove();
+}
 function toggleSelectAll(containerId, btn) {
   const checkboxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]`);
   if(checkboxes.length === 0) return;
   const allChecked = Array.from(checkboxes).every(cb => cb.checked);
   checkboxes.forEach(cb => cb.checked = !allChecked);
   btn.textContent = allChecked ? 'Select All' : 'Deselect All';
+  const container = $(containerId);
+  if(container && container._msRefresh) container._msRefresh();
 }
 // Keep the Select All / Deselect All button in sync when the user manually
 // (un)checks an individual option afterwards — bind once per container,
@@ -411,17 +611,13 @@ function openTeacherModal(id){
   $('tMaxDay').value = t?t.maxPerDay:6;
   $('tMaxWeek').value = t?t.maxPerWeek:30;
   
-  $('tSubjects').innerHTML = state.subjects.length?
-    state.subjects.map(s=>`<label class="check-item">
-      <input type="checkbox" value="${s.id}" ${t&&t.subjects.includes(s.id)?'checked':''}>
-      <span>${s.code} — ${s.name}</span></label>`).join(''):
-    '<div style="font-size:.8rem;color:var(--text-2);padding:.5rem;grid-column:1/-1;">No subjects added yet.</div>';
+  buildMultiSelect('tSubjects', state.subjects.map(s=>(
+    {value:s.id, label:`${s.code} — ${s.name}`, checked:!!(t&&t.subjects.includes(s.id))}
+  )), {placeholder:'Select subject(s)…', emptyMsg:'No subjects added yet.'});
 
-  $('tClasses').innerHTML = state.classes.length?
-    state.classes.map(c=>`<label class="check-item">
-      <input type="checkbox" value="${c.id}" ${t&&t.eligibleClasses&&t.eligibleClasses.includes(c.id)?'checked':''}>
-      <span>${c.name}${c.section?' - '+c.section:''}${c.course?' ('+c.course+')':''}</span></label>`).join(''):
-    '<div style="font-size:.8rem;color:var(--text-2);padding:.5rem;grid-column:1/-1;">No classes added yet.</div>';
+  buildMultiSelect('tClasses', state.classes.map(c=>(
+    {value:c.id, label:`${c.name}${c.section?' - '+c.section:''}${c.course?' ('+c.course+')':''}`, checked:!!(t&&t.eligibleClasses&&t.eligibleClasses.includes(c.id))}
+  )), {placeholder:'Select eligible class(es)…', emptyMsg:'No classes added yet.'});
 
   $('tUnavailable').innerHTML = ALL_DAYS.map(d=>`
     <label class="day-pill">
@@ -480,8 +676,33 @@ function deleteTeacher(id){
     save(); renderTeachers(); toast('Teacher deleted','warn');
   }, { type:'danger', title:'Delete Teacher', confirmText:'Delete' });
 }
+function teacherSearchFields(t){
+  const subjNames=t.subjects.map(sid=>{const s=state.subjects.find(x=>x.id===sid);return s?s.code:'';}).filter(Boolean);
+  const clsNames=t.eligibleClasses&&t.eligibleClasses.length?t.eligibleClasses.map(cid=>{const c=state.classes.find(x=>x.id===cid);return c?getClassLabel(c):'';}).filter(Boolean):[];
+  return {
+    id:t.id||'', level:t.level||'', name:t.name||'',
+    subjects:subjNames.join(' '), classes:clsNames.join(' '),
+    maxday:String(t.maxPerDay!=null?t.maxPerDay:''), maxweek:String(t.maxPerWeek!=null?t.maxPerWeek:'')
+  };
+}
+function matchesSearch(fields, q, col){
+  if(!q) return true;
+  q=q.toLowerCase();
+  if(col && col!=='all') return String(fields[col]||'').toLowerCase().includes(q);
+  return Object.values(fields).some(v=>String(v||'').toLowerCase().includes(q));
+}
 function renderTeachers(){
-  $('teachersTable').innerHTML = state.teachers.length? state.teachers.map(t=>{
+  const q=$('teacherSearchInput')?$('teacherSearchInput').value.trim():'';
+  const filtered=state.teachers.filter(t=>matchesSearch(teacherSearchFields(t), q, 'all'));
+  if(!state.teachers.length){
+    $('teachersTable').innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem;">No teachers added yet.</td></tr>';
+    return;
+  }
+  if(!filtered.length){
+    $('teachersTable').innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem;">No teachers match your search.</td></tr>';
+    return;
+  }
+  $('teachersTable').innerHTML = filtered.map(t=>{
     const subjNames=t.subjects.map(sid=>{const s=state.subjects.find(x=>x.id===sid);return s?s.code:'';}).filter(Boolean);
     const clsNames=t.eligibleClasses&&t.eligibleClasses.length?t.eligibleClasses.map(cid=>{const c=state.classes.find(x=>x.id===cid);return c?`${c.name.replace('Class ','')}${c.section?'-'+c.section:''}`:'';}).filter(Boolean):[];
     return `<tr>
@@ -499,7 +720,7 @@ function renderTeachers(){
           <button class="btn-icon" onclick="deleteTeacher('${t.id}')" title="Delete" style="color:var(--danger);"><i class="ri-delete-bin-line"></i></button>
         </div>
       </td>
-    </tr>`;}).join(''): '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem;">No teachers added yet.</td></tr>';
+    </tr>`;}).join('');
 }
 
 let currentMappingTeacherId = null;
@@ -529,15 +750,19 @@ function openTeacherMapping(tId) {
       }).join('');
 
       if(!subjHtml) subjHtml = '<div style="font-size:.8rem;color:var(--muted);padding:.5rem;">No subjects assigned to this teacher in their profile.</div>';
-      
-      return `<div class="mapping-class">
-        <div style="font-weight:700;color:var(--text);margin-bottom:.75rem;">${c.name} ${c.section||''} ${c.course?'('+c.course+')':''}</div>
+      const classLabel=`${c.name} ${c.section||''} ${c.course?'('+c.course+')':''}`;
+      const subjCodes=t.subjects.map(sid=>state.subjects.find(s=>s.id===sid)?.code||'').join(' ');
+      const searchBlob=(classLabel+' '+subjCodes).toLowerCase();
+      return `<div class="mapping-class" data-search="${searchBlob.replace(/"/g,'')}">
+        <div style="font-weight:700;color:var(--text);margin-bottom:.75rem;">${classLabel}</div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">${subjHtml}</div>
       </div>`;
     }).join('');
   }
-  
+
   $('teacherMappingArea').innerHTML = html;
+  const mapSearch=$('teacherMappingSearch');
+  if(mapSearch) mapSearch.value='';
   $('teacherMappingModal').classList.remove('hidden');
 }
 
@@ -587,15 +812,16 @@ function openSubjectModal(id){
   const s = id?state.subjects.find(x=>x.id===id):null;
   $('sCode').value = s?s.code:'';
   $('sName').value = s?s.name:'';
-  $('sType').value = s?s.type:'theory';
-  
-  $('sElective').innerHTML = state.subjects.filter(x=>x.id!==id).length ?
-    state.subjects.filter(x=>x.id!==id).map(x=>
-      `<label class="check-item">
-        <input type="checkbox" value="${x.id}" ${s&&s.alternativeIds&&s.alternativeIds.includes(x.id)?'checked':''} class="s-alt-cb">
-        <span>${x.code} — ${x.name}</span>
-      </label>`).join('') :
-    '<div style="font-size:.8rem;color:var(--muted);padding:.5rem;grid-column:1/-1;">Add more subjects first to create elective groups.</div>';
+  const selectedTypes = s ? (Array.isArray(s.types)&&s.types.length ? s.types : [s.type||'theory']) : ['theory'];
+  const typeLabels = {theory:'Theory',practical:'Practical (Lab)',activity:'Activity (PE / Art / Music)',language:'Language'};
+  buildMultiSelect('sTypes', Object.keys(typeLabels).map(tv=>(
+    {value:tv, label:typeLabels[tv], checked:selectedTypes.includes(tv), cbClass:'s-type-cb'}
+  )), {placeholder:'Select type(s)…'});
+
+  const electiveCandidates = state.subjects.filter(x=>x.id!==id);
+  buildMultiSelect('sElective', electiveCandidates.map(x=>(
+    {value:x.id, label:`${x.code} — ${x.name}`, checked:!!(s&&s.alternativeIds&&s.alternativeIds.includes(x.id)), cbClass:'s-alt-cb'}
+  )), {placeholder:'Select alternative subject(s)…', emptyMsg:'Add more subjects first to create elective groups.'});
   $('sTough').checked = s ? (s.tough !== false && (s.tough || isAutoToughSubject(s))) : false;
   $('sPriority').value = s && s.priority ? s.priority : 'semi-main';
   $('subjectModal').classList.remove('hidden');
@@ -616,7 +842,9 @@ function saveSubject(){
   const altIds=[...document.querySelectorAll('#sElective .s-alt-cb:checked')].map(o=>o.value);
   const tough=$('sTough').checked;
   const priority=$('sPriority').value;
-  const data={ id:editingIds.subject||'sub_'+Date.now(), code, name, type:$('sType').value, priority, alternativeIds:altIds, tough };
+  let types=[...document.querySelectorAll('#sTypes .s-type-cb:checked')].map(o=>o.value);
+  if(!types.length){ toast('Select at least one Type','error'); return; }
+  const data={ id:editingIds.subject||'sub_'+Date.now(), code, name, types, type:types[0], priority, alternativeIds:altIds, tough };
   
   if(editingIds.subject){
     const i=state.subjects.findIndex(s=>s.id===editingIds.subject);
@@ -668,16 +896,35 @@ function getElectiveGroup(subjectId){
   if(!subj||!subj.alternativeIds||!subj.alternativeIds.length) return [subjectId];
   return [subjectId,...subj.alternativeIds];
 }
+function subjectSearchFields(s){
+  const altNames = s.alternativeIds&&s.alternativeIds.length ? s.alternativeIds.map(aid=>state.subjects.find(x=>x.id===aid)?.name).filter(Boolean).join(' ') : '';
+  return {
+    code:s.code||'', name:s.name||'', type:getSubjectTypes(s).join(' '),
+    priority:s.priority||'semi-main', alternatives:altNames
+  };
+}
 function renderSubjects(){
-  $('subjectsTable').innerHTML = state.subjects.length? state.subjects.map(s=>{
+  const q=$('subjectSearchInput')?$('subjectSearchInput').value.trim():'';
+  const filtered=state.subjects.filter(s=>matchesSearch(subjectSearchFields(s), q, 'all'));
+  if(!state.subjects.length){
+    $('subjectsTable').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem;">No subjects added yet.</td></tr>';
+    return;
+  }
+  if(!filtered.length){
+    $('subjectsTable').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem;">No subjects match your search.</td></tr>';
+    return;
+  }
+  $('subjectsTable').innerHTML = filtered.map(s=>{
     const altNames = s.alternativeIds&&s.alternativeIds.length ? s.alternativeIds.map(aid=>state.subjects.find(x=>x.id===aid)?.name).join(', ') : '—';
-    const typeBadge={theory:'badge-blue',practical:'badge-purple',activity:'badge-green',language:'badge-amber'}[s.type]||'badge-blue';
+    const typeBadgeClass={theory:'badge-blue',practical:'badge-purple',activity:'badge-green',language:'badge-amber'};
+    const subjTypes = getSubjectTypes(s);
+    const typeBadges = subjTypes.map(t=>`<span class="badge ${typeBadgeClass[t]||'badge-blue'}">${t}</span>`).join(' ');
     const subjPriority = s.priority || 'semi-main';
     const priorityBadge = subjPriority === 'main' ? '<span class="badge badge-amber">Main</span>' : (subjPriority === 'free' ? '<span class="badge badge-green">Free</span>' : '<span class="badge badge-blue">Semi-Main</span>');
     return `<tr>
       <td><span class="badge badge-blue mono">${s.code}</span></td>
       <td style="font-weight:600;">${s.name}</td>
-      <td><span class="badge ${typeBadge}">${s.type}</span></td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap;">${typeBadges}</div></td>
       <td>${priorityBadge}</td>
       <td style="font-size:.8rem;color:var(--text-2);">${altNames}</td>
       <td>
@@ -686,7 +933,7 @@ function renderSubjects(){
           <button class="btn-icon" onclick="deleteSubject('${s.id}')" title="Delete" style="color:var(--danger);"><i class="ri-delete-bin-line"></i></button>
         </div>
       </td>
-    </tr>`;}).join(''): '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem;">No subjects added yet.</td></tr>';
+    </tr>`;}).join('');
 }
 
 /* CLASSES */
@@ -732,6 +979,7 @@ function openClassModal(id){
   handleClassNameChange();
   populateInchargeSelect(c?c.inchargeId:'');
   $('cMaxPerDay').value = c&&c.maxPerDay!=null?c.maxPerDay:0;
+  $('cMaxPerWeek').value = c&&c.maxPeriodsPerWeek!=null?c.maxPeriodsPerWeek:48;
   $('classModal').classList.remove('hidden');
   refreshSelects($('classModal'));
 }
@@ -766,7 +1014,8 @@ function saveClass(){
   
   const inchargeId=$('cIncharge').value||'';
   const maxPerDay=Math.min(parseInt($('cMaxPerDay').value)||0, 8);
-  const data={ id:editingIds.class||'cls_'+Date.now(), name, section:isSenior?'':section, course:isSenior?course:'', subjects, inchargeId, maxPerDay };
+  const maxPeriodsPerWeek=Math.min(Math.max(parseInt($('cMaxPerWeek').value)||48, 1), 48);
+  const data={ id:editingIds.class||'cls_'+Date.now(), name, section:isSenior?'':section, course:isSenior?course:'', subjects, inchargeId, maxPerDay, maxPeriodsPerWeek };
   if(editingIds.class){
     const i=state.classes.findIndex(c=>c.id===editingIds.class);
     state.classes[i]=data;
@@ -844,6 +1093,7 @@ function openClassSubjectsModal(clsId){
     const checked = mapped ? 'checked' : '';
     const periods = mapped ? mapped.periodsPerWeek : '';
     const subjPriority = subj.priority || 'semi-main';
+    const priorityLabel = subjPriority === 'main' ? 'Main' : (subjPriority === 'free' ? 'Free' : 'Semi-Main');
     const priorityBadge = subjPriority === 'main' ? '<span class="badge badge-amber">Main</span>' : (subjPriority === 'free' ? '<span class="badge badge-green">Free</span>' : '<span class="badge badge-blue">Semi-Main</span>');
     const eligibleT = state.teachers.filter(t => t.subjects.includes(subj.id) && (!t.eligibleClasses || t.eligibleClasses.includes(cls.id)));
     const tCheckboxes = eligibleT.map(t => {
@@ -857,7 +1107,9 @@ function openClassSubjectsModal(clsId){
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px;" title="${t.name}">${t.name}</span>
       </label>`;
     }).join('');
-    html += `<tr>
+    const teacherNames = eligibleT.map(t=>t.name).join(' ');
+    const searchBlob = [subj.code, subj.name, periods, priorityLabel, teacherNames].join(' ').toLowerCase().replace(/"/g,'');
+    html += `<tr data-search="${searchBlob}">
       <td style="text-align:center;"><input type="checkbox" data-subj="${subj.id}" class="include-cb" ${checked} onchange="toggleSubjInput(this)"></td>
       <td><strong style="color:var(--primary-h);">${subj.code}</strong><span style="display:block;font-size:.75rem;color:var(--text-2);">${subj.name}</span></td>
       <td><input type="number" min="0" max="15" value="${periods}" data-subj="${subj.id}" class="input periods-inp" style="width:72px;" ${mapped ? '' : 'disabled'}></td>
@@ -869,8 +1121,29 @@ function openClassSubjectsModal(clsId){
   $('classSubjectsArea').innerHTML=html;
   const isSenior=cls.name==='Class 11'||cls.name==='Class 12';
   $('applyStreamBtn').style.display=isSenior&&cls.course?'inline-flex':'none';
+  if($('classSubjectsSearch')) $('classSubjectsSearch').value='';
   $('classSubjectsModal').classList.remove('hidden');
   /* no selects in this modal — table uses checkboxes/number inputs only */
+}
+function filterClassSubjectRows(){
+  const q=($('classSubjectsSearch')?.value||'').trim().toLowerCase();
+  const rows=document.querySelectorAll('#classSubjectsArea tbody tr');
+  let anyVisible=false;
+  rows.forEach(r=>{
+    const match=!q || (r.dataset.search||'').includes(q);
+    r.style.display=match?'':'none';
+    if(match) anyVisible=true;
+  });
+  let empty=document.querySelector('#classSubjectsArea .subj-no-results');
+  if(rows.length && !anyVisible){
+    if(!empty){
+      empty=document.createElement('div');
+      empty.className='subj-no-results';
+      empty.style.cssText='text-align:center;color:var(--muted);padding:1rem;';
+      empty.textContent='No subjects match your search.';
+      $('classSubjectsArea').appendChild(empty);
+    }
+  } else if(empty) empty.remove();
 }
 const STREAM_TEMPLATES={
   'Medical':{sub_ENG:5,sub_PHY:7,sub_CHM:7,sub_BIO:7,sub_COM:4},
@@ -938,11 +1211,30 @@ function saveClassSubjects(){
     }
   }
 }
+function classSearchFields(c){
+  const inchargeTeacher = c.inchargeId ? state.teachers.find(t=>t.id===c.inchargeId) : null;
+  const subjCodes = c.subjects.map(s=>{const sub=state.subjects.find(x=>x.id===s.subjectId); return sub?sub.code:'';}).filter(Boolean);
+  return {
+    class:getClassLabel(c), course:c.course||'', incharge:inchargeTeacher?inchargeTeacher.name:'',
+    maxday:String(c.maxPerDay||''), subjects:subjCodes.join(' ')
+  };
+}
 function renderClasses(){
-  $('classesTable').innerHTML = state.classes.length? state.classes.map(c=>{
+  const q=$('classSearchInput')?$('classSearchInput').value.trim():'';
+  const filtered=state.classes.filter(c=>matchesSearch(classSearchFields(c), q, 'all'));
+  if(!state.classes.length){
+    $('classesTable').innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">No classes added yet.</td></tr>';
+    return;
+  }
+  if(!filtered.length){
+    $('classesTable').innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">No classes match your search.</td></tr>';
+    return;
+  }
+  $('classesTable').innerHTML = filtered.map(c=>{
     const totalPeriods=c.subjects.reduce((a,s)=>a+s.periodsPerWeek,0);
-    const slots=state.setup.periodsPerDay*state.setup.workingDays.length;
-    const fit = totalPeriods<=slots;
+    const gridSlots=state.setup.periodsPerDay*state.setup.workingDays.length;
+    const slots=Math.min(c.maxPeriodsPerWeek||48, gridSlots);
+    const periodsColor = totalPeriods===0 ? 'inherit' : (totalPeriods===slots ? 'var(--success)' : 'var(--warn)');
     const subjList = c.subjects.length ? c.subjects.map(s => {
       const sub = state.subjects.find(x=>x.id===s.subjectId);
       return `<span class="subject-tag mr-1 mb-1">${sub?.code}:${s.periodsPerWeek}p</span>`;
@@ -960,7 +1252,7 @@ function renderClasses(){
       <td>${inchargeCell}</td>
       <td>${maxDayCell}</td>
       <td>${subjList}</td>
-      <td>${totalPeriods} / ${slots} ${fit?'<span class="badge badge-green" style="margin-left:4px;">OK</span>':'<span class="badge badge-red" style="margin-left:4px;">Over</span>'}</td>
+      <td><span style="color:${periodsColor};font-weight:600;">${totalPeriods} / ${slots}</span></td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap;">
           <button class="btn btn-primary btn-sm" onclick="openClassSubjectsModal('${c.id}')"><i class="ri-book-2-line"></i> Manage</button>
@@ -968,7 +1260,7 @@ function renderClasses(){
           <button class="btn-icon" onclick="deleteClass('${c.id}')" title="Delete" style="color:var(--danger);"><i class="ri-delete-bin-line"></i></button>
         </div>
       </td>
-    </tr>`;}).join(''): '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">No classes added yet.</td></tr>';
+    </tr>`;}).join('');
 }
 
 /* GENERATE */
@@ -989,8 +1281,9 @@ function validateBeforeGeneration(){
     const label=`${c.name}${c.section?'-'+c.section:''}${c.course?' ('+c.course+')':''}`;
     if(!c.subjects.length) errors.push(`${label}: No subjects mapped`);
     const total=c.subjects.reduce((a,s)=>a+s.periodsPerWeek,0);
-    if(total<totalSlots) warnings.push(`${label}: ${total} periods/week vs ${totalSlots} slots — extra slots will use revision/repeat periods.`);
-    if(total>totalSlots) errors.push(`${label}: ${total} periods/week exceeds ${totalSlots} available slots. Reduce subject load.`);
+    const classCap=Math.min(c.maxPeriodsPerWeek||48, totalSlots);
+    if(total<classCap) warnings.push(`${label}: ${total} periods/week vs ${classCap} configured max — extra slots will use revision/repeat periods.`);
+    if(total>classCap) errors.push(`${label}: ${total} periods/week exceeds ${classCap} max periods/week. Reduce subject load or raise the class's Max Periods/Week.`);
     c.subjects.forEach(s=>{
       const subj=state.subjects.find(x=>x.id===s.subjectId);
       const subjName=subj?subj.code:'Unknown';
@@ -1042,15 +1335,17 @@ function logMsg(msg,type='info'){
   $('genLog').scrollTop=$('genLog').scrollHeight;
 }
 
+function getSubjectTypes(s){
+  if(!s) return ['theory'];
+  return Array.isArray(s.types)&&s.types.length ? s.types : [s.type||'theory'];
+}
+const TYPE_DIFFICULTY={practical:70,theory:50,language:40,activity:10};
 function getSubjectDifficulty(subjectId){
   const s=state.subjects.find(x=>x.id===subjectId);
   if(!s) return 0;
   if(s.tough||isAutoToughSubject(s)) return 100;
-  if(s.type==='practical') return 70;
-  if(s.type==='theory') return 50;
-  if(s.type==='language') return 40;
-  if(s.type==='activity') return 10;
-  return 30;
+  const scores=getSubjectTypes(s).map(t=>TYPE_DIFFICULTY[t]!=null?TYPE_DIFFICULTY[t]:30);
+  return Math.max(...scores);
 }
 
 function getClassLabel(cls){
@@ -1803,6 +2098,11 @@ function renderHistory(){
     $('timetableRender').innerHTML=`<div style="text-align:center;padding:3rem;color:var(--muted);"><i class="ri-history-line" style="font-size:3rem;display:block;margin-bottom:.75rem;opacity:.4;"></i>No history available.</div>`;
     return;
   }
+  const existingSearch=$('historySearchInput');
+  const wasFocused = existingSearch && document.activeElement===existingSearch;
+  const caretPos = wasFocused ? existingSearch.selectionStart : null;
+  const rawQ=existingSearch?existingSearch.value:'';
+  const q=rawQ.trim().toLowerCase();
   let html = `<div class="card p-5">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px;">
       <div>
@@ -1811,8 +2111,17 @@ function renderHistory(){
       </div>
       <button class="btn btn-danger-outline btn-sm" onclick="clearAllHistory()"><i class="ri-delete-bin-line"></i> Clear All</button>
     </div>
+    <div class="search-box mb-4">
+      <i class="ri-search-line"></i>
+      <input type="text" id="historySearchInput" class="search-input" placeholder="Search history by date/time…" value="${rawQ.replace(/"/g,'&quot;')}" oninput="renderHistory()">
+    </div>
     <div style="display:flex;flex-direction:column;gap:8px;">`;
-  state.history.forEach((h, i) => {
+  const indexed = state.history.map((h, i) => ({h, i}));
+  const filtered = q ? indexed.filter(({h}) => new Date(h.timestamp).toLocaleString().toLowerCase().includes(q)) : indexed;
+  if(!filtered.length){
+    html += `<div style="text-align:center;color:var(--muted);padding:1.5rem;">No history entries match your search.</div>`;
+  }
+  filtered.forEach(({h, i}) => {
     const d = new Date(h.timestamp).toLocaleString();
     html += `<div class="history-entry">
       <div>
@@ -1827,6 +2136,13 @@ function renderHistory(){
   });
   html += `</div></div>`;
   $('timetableRender').innerHTML = html;
+  if(wasFocused){
+    const newSearch=$('historySearchInput');
+    if(newSearch){
+      newSearch.focus();
+      newSearch.setSelectionRange(caretPos, caretPos);
+    }
+  }
 }
 
 function restoreHistory(index){
@@ -1971,7 +2287,7 @@ function editSlotStep2(tId, cId, subjIdsStr) {
       const subj = state.subjects.find(s => s.id === sid);
       if(!subj) return;
       html += `<div class="slot-option" onclick="applySlotEdit('${sid}', ${tId ? `'${tId}'` : 'null'}, ${cId ? `'${cId}'` : 'null'})">
-        <div><div class="slot-option-name">${subj.name}</div><div class="slot-option-sub">${subj.code} · ${subj.type}</div></div>
+        <div><div class="slot-option-name">${subj.name}</div><div class="slot-option-sub">${subj.code} · ${getSubjectTypes(subj).join(', ')}</div></div>
         <i class="ri-arrow-right-s-line" style="color:var(--muted);font-size:18px;"></i>
       </div>`;
     });
@@ -2469,7 +2785,7 @@ function _doLoadSampleData(){
     ['BST','Business Studies','theory',[],false],['ECO','Economics','theory',[],false],['HIS','History','theory',[],false],
     ['COM','Computer Science','practical',[]],['PE','Physical Education','activity',[]],['INF','Informatics Practices','practical',[]]
   ];
-  subjData.forEach(([code,name,type,alts,tough])=>state.subjects.push({id:'sub_'+code,code,name,type,alternativeIds:alts,tough}));
+  subjData.forEach(([code,name,type,alts,tough])=>state.subjects.push({id:'sub_'+code,code,name,type,types:[type],alternativeIds:alts,tough}));
   state.subjects.find(s=>s.id==='sub_COM').alternativeIds=['sub_PE','sub_INF'];
   state.subjects.find(s=>s.id==='sub_PE').alternativeIds=['sub_COM','sub_INF'];
   state.subjects.find(s=>s.id==='sub_INF').alternativeIds=['sub_COM','sub_PE'];
@@ -2519,6 +2835,8 @@ function _doLoadSampleData(){
     ]}
   ];
   
+  state.classes.forEach(c=>{ if(c.maxPeriodsPerWeek==null) c.maxPeriodsPerWeek=48; });
+  state.subjects.forEach(s=>{ if(!Array.isArray(s.types)||!s.types.length) s.types=[s.type||'theory']; });
   save(); loadSetupUI(); renderTeachers(); renderSubjects(); renderClasses(); renderGenerateStats();
   toast('Sample data loaded!');
 }
