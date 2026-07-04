@@ -1157,6 +1157,35 @@ function pickTeacherForSlot(timetable, subjectId, classId, preferredIds, d, p, d
         This prevents "1 teacher, 2 classes, same period" hard conflicts.
   ─────────────────────────────────────────────────
 */
+/* ── Shared helper: which of a class's subjects (if any) its Class
+   Incharge is actually qualified to teach.
+   Checked in TWO tiers, both used consistently by Phase 1 (subject
+   forcing) and Phase 2 Pass 0 (teacher forcing) so the two phases can
+   never disagree about whether the incharge "owns" a subject here:
+     1. An explicit local mapping (cls.subjects[].teacherIds includes
+        the incharge) — the strongest signal, always wins if present.
+     2. Falling back to the incharge's own general subject list
+        (t.subjects) + eligibleClasses restriction — the SAME rule
+        `getAllTeachersForSubject`/`pickTeacherForSlot` already use
+        everywhere else in Phase 2. This is required because newly
+        added sections auto-copy a sibling's subject list with
+        `teacherIds: []` (unmapped) until someone manually re-maps
+        teachers for that specific section — without this fallback,
+        the incharge would only ever get forced into P1 for whichever
+        class happened to have that manual mapping already done,
+        reproducing the exact same bug for every other class/section.
+   This keeps the rule identical for every class/section/subject/
+   teacher combination, regardless of when or how each was added. ── */
+function inchargeSubjectFor(cls, inchargeTeacher){
+  if(!cls || !inchargeTeacher) return null;
+  const explicit = cls.subjects.find(s => s.teacherIds && s.teacherIds.includes(inchargeTeacher.id));
+  if(explicit) return explicit;
+  return cls.subjects.find(s =>
+    inchargeTeacher.subjects.includes(s.subjectId) &&
+    (!inchargeTeacher.eligibleClasses || !inchargeTeacher.eligibleClasses.length || inchargeTeacher.eligibleClasses.includes(cls.id))
+  ) || null;
+}
+
 function phase1AssignSubjects(days, periods){
   logMsg('📚 Phase 1: Column-lock subject assignment...','step');
 
@@ -1347,6 +1376,41 @@ function phase1AssignSubjects(days, periods){
         const cs=classState[cls.id];
         if(!cs) return;
 
+        /* ── Class Incharge forcing: Period 1 (p===0) must be the
+           incharge's own subject, driven by whoever is actually
+           selected as incharge — not whatever the column-lock fill
+           would otherwise pick. This has to happen HERE, at subject-
+           planning time, because Phase 2 only ever picks a TEACHER
+           for the subject Phase 1 already locked in; if Phase 1 never
+           plans the incharge's subject into P1, no amount of teacher-
+           forcing in Phase 2 can put it there without creating a
+           subject/teacher mismatch. Falls through to the normal fill
+           below whenever the incharge isn't actually free (unavailable
+           day / at cap / already used elsewhere / quota exhausted) so
+           P1 never sits permanently empty. */
+        if(p===0 && cls.inchargeId){
+          const inchargeTeacher=state.teachers.find(t=>t.id===cls.inchargeId);
+          const inchargeMapping=inchargeSubjectFor(cls, inchargeTeacher);
+          if(inchargeMapping && (cs.rem[inchargeMapping.subjectId]||0)>0){
+            const day=days[d];
+            const freeForIncharge =
+              (!inchargeTeacher.unavailableDays||!inchargeTeacher.unavailableDays.includes(day)) &&
+              !tBusy[inchargeTeacher.id][d][0] &&
+              tDay[inchargeTeacher.id][d]<inchargeTeacher.maxPerDay &&
+              tWeek[inchargeTeacher.id]<inchargeTeacher.maxPerWeek;
+            if(freeForIncharge){
+              const sid=inchargeMapping.subjectId;
+              subjectPlan[cls.id][d][0]=sid;
+              tBusy[inchargeTeacher.id][d][0]=true;
+              tDay[inchargeTeacher.id][d]++;
+              tWeek[inchargeTeacher.id]++;
+              cs.rem[sid]--;
+              while(cs.qi<cs.sorted.length&&(cs.rem[cs.sorted[cs.qi].subjectId]||0)<=0) cs.qi++;
+              return;
+            }
+          }
+        }
+
         while(cs.qi<cs.sorted.length&&(cs.rem[cs.sorted[cs.qi].subjectId]||0)<=0) cs.qi++;
         if(cs.qi>=cs.sorted.length) return; // all quotas met → slot stays FREE
 
@@ -1450,10 +1514,14 @@ function phase2AssignTeachers(subjectPlan, days, periods){
       const subjectId=subjectPlan.subjectPlan[cls.id][d][0]; // P1 = index 0
       if(!subjectId) continue;
       // Never swap the subject into the incharge's own — only take P1 if
-      // they're actually a mapped teacher for whatever subject already
-      // sits there. Otherwise leave it for Pass 1 to assign normally.
-      const inchargeMapping=cls.subjects.find(s=>s.subjectId===subjectId);
-      if(!inchargeMapping || !inchargeMapping.teacherIds.includes(inchargeTeacher.id)) continue;
+      // they're actually qualified to teach whatever subject Phase 1
+      // already planned there (same eligibility rule as everywhere else,
+      // via inchargeSubjectFor — see its comment for why the fallback
+      // tier is required). Otherwise leave it for Pass 1 to assign
+      // normally; this should rarely trigger since Phase 1 itself now
+      // plans the incharge's own subject into P1 whenever possible.
+      const inchargeMapping=inchargeSubjectFor(cls, inchargeTeacher);
+      if(!inchargeMapping || inchargeMapping.subjectId!==subjectId) continue;
       if(timetable.teacherWeeklyCount[inchargeTeacher.id]>=inchargeTeacher.maxPerWeek) continue;
       if(inchargeTeacher.unavailableDays&&inchargeTeacher.unavailableDays.includes(day)) continue;
       if(!isTeacherGloballyFree(timetable,inchargeTeacher.id,d,0)) continue;
