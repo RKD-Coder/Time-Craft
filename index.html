@@ -280,7 +280,7 @@
       <div class="overflow-x-auto scrollbar">
         <table>
           <thead>
-            <tr><th>Class</th><th>Course/Stream</th><th>Subjects & Periods</th><th>Total P/W</th><th>Actions</th></tr>
+            <tr><th>Class</th><th>Course/Stream</th><th>Class Incharge</th><th>Max/Day</th><th>Subjects & Periods</th><th>Total P/W</th><th>Actions</th></tr>
           </thead>
           <tbody id="classesTable"></tbody>
         </table>
@@ -328,15 +328,15 @@
       <div class="grid md:grid-cols-3 gap-3 mb-4">
         <div class="gen-step">
           <div class="gen-step-num">①</div>
-          <div>Assign subjects — tough subjects in P1–5, senior stream sync</div>
+          <div>Column-lock subjects — same period = same subject Mon→Sat; main subjects in P1–5</div>
         </div>
         <div class="gen-step">
           <div class="gen-step-num">②</div>
-          <div>Assign teachers — fallback pool, max 3 consecutive</div>
+          <div>Column-lock teachers — same teacher stays with the same period column; class incharge owns P1</div>
         </div>
         <div class="gen-step">
           <div class="gen-step-num">③</div>
-          <div>Build final timetable — all slots verified and filled</div>
+          <div>Finalize — verify slots, flag shortages, save to history</div>
         </div>
       </div>
 
@@ -584,7 +584,7 @@
 
 <!-- ── CLASS MODAL ───────────────────────────────────────── -->
 <div id="classModal" class="modal-bg hidden">
-  <div class="card p-6" style="width:100%;max-width:480px;">
+  <div class="card p-6" style="width:100%;max-width:520px;">
     <div class="flex justify-between items-center mb-4">
       <h3 class="section-title" id="classModalTitle">Add Class</h3>
       <button class="btn-icon" onclick="closeModal('classModal')"><i class="ri-close-line"></i></button>
@@ -613,6 +613,16 @@
           <option value="Commerce">Commerce</option>
           <option value="Arts">Arts / Humanities</option>
         </select>
+      </div>
+      <div>
+        <label>Class Incharge <span style="text-transform:none;letter-spacing:0;font-weight:400;">(Teacher assigned to Period 1 every day)</span></label>
+        <select id="cIncharge" class="input">
+          <option value="">— None / Select Later —</option>
+        </select>
+      </div>
+      <div>
+        <label>Max Periods Per Day <span style="text-transform:none;letter-spacing:0;font-weight:400;">(0 = unlimited)</span></label>
+        <input id="cMaxPerDay" type="number" class="input" value="0" min="0" max="12" placeholder="0 = no class-level cap">
       </div>
     </div>
     <div class="flex gap-2 mt-5 pt-4" style="border-top:1px solid var(--border);">

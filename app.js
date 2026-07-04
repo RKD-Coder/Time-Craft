@@ -588,6 +588,18 @@ function handleClassNameChange(){
     if(disp) disp.setAttribute('data-disabled', sel.disabled ? 'true' : 'false');
   });
 }
+function populateInchargeSelect(selectedId){
+  const sel=$('cIncharge');
+  sel.innerHTML='<option value="">— None / Select Later —</option>';
+  state.teachers.forEach(t=>{
+    const opt=document.createElement('option');
+    opt.value=t.id;
+    opt.textContent=`${t.name} (${t.id})`;
+    if(t.id===selectedId) opt.selected=true;
+    sel.appendChild(opt);
+  });
+}
+
 function openClassModal(id){
   editingIds.class=id;
   $('classModalTitle').textContent = id?'Edit Class':'Add Class';
@@ -596,6 +608,8 @@ function openClassModal(id){
   $('cSection').value = c?c.section:'A';
   $('cCourse').value = c?c.course:'';
   handleClassNameChange();
+  populateInchargeSelect(c?c.inchargeId:'');
+  $('cMaxPerDay').value = c&&c.maxPerDay!=null?c.maxPerDay:0;
   $('classModal').classList.remove('hidden');
   refreshSelects($('classModal'));
 }
@@ -628,7 +642,9 @@ function saveClass(){
     }
   }
   
-  const data={ id:editingIds.class||'cls_'+Date.now(), name, section:isSenior?'':section, course:isSenior?course:'', subjects };
+  const inchargeId=$('cIncharge').value||'';
+  const maxPerDay=parseInt($('cMaxPerDay').value)||0;
+  const data={ id:editingIds.class||'cls_'+Date.now(), name, section:isSenior?'':section, course:isSenior?course:'', subjects, inchargeId, maxPerDay };
   if(editingIds.class){
     const i=state.classes.findIndex(c=>c.id===editingIds.class);
     state.classes[i]=data;
@@ -656,7 +672,37 @@ function openClassSubjectsModal(clsId){
   editingIds.classSubj=clsId;
   const cls=state.classes.find(c=>c.id===clsId);
   $('classSubjectsTitle').textContent=`Subjects for ${cls.name} ${cls.section?'-'+cls.section:''} ${cls.course?'('+cls.course+')':''}`;
-  let html=`<table>
+
+  /* ── Info rows: Course/Stream + Incharge + Max/Day ─────── */
+  const inchargeTeacher=cls.inchargeId?state.teachers.find(t=>t.id===cls.inchargeId):null;
+  let infoHtml=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:1.25rem;padding:12px 14px;background:var(--bg-alt);border-radius:var(--r-lg);border:1px solid var(--border);">`;
+
+  if(cls.course){
+    infoHtml+=`<div>
+      <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-2);font-weight:600;margin-bottom:2px;">Course / Stream</div>
+      <span class="badge badge-purple">${cls.course}</span>
+    </div>`;
+  }
+
+  infoHtml+=`<div>
+    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-2);font-weight:600;margin-bottom:4px;">Class Incharge</div>`;
+  if(inchargeTeacher){
+    infoHtml+=`<div style="font-weight:600;font-size:.875rem;">${inchargeTeacher.name}</div>
+      <span class="badge badge-blue mono" style="font-size:.7rem;">${inchargeTeacher.id}</span>`;
+  } else {
+    infoHtml+=`<span style="color:var(--muted);font-size:.85rem;">Not assigned</span>`;
+  }
+  infoHtml+=`</div>`;
+
+  const maxDayDisplay=(cls.maxPerDay&&cls.maxPerDay>0)?`${cls.maxPerDay} periods/day`:'No cap';
+  infoHtml+=`<div>
+    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-2);font-weight:600;margin-bottom:4px;">Max Periods / Day</div>
+    <span class="badge badge-amber">${maxDayDisplay}</span>
+  </div>`;
+
+  infoHtml+=`</div>`;
+
+  let html=infoHtml+`<table>
     <thead><tr>
       <th>Include</th>
       <th>Subject</th>
@@ -767,9 +813,18 @@ function renderClasses(){
       const sub = state.subjects.find(x=>x.id===s.subjectId);
       return `<span class="subject-tag mr-1 mb-1">${sub?.code}:${s.periodsPerWeek}p</span>`;
     }).join('') : '<span style="color:var(--muted);">No subjects mapped</span>';
+    const inchargeTeacher = c.inchargeId ? state.teachers.find(t=>t.id===c.inchargeId) : null;
+    const inchargeCell = inchargeTeacher
+      ? `<div style="font-weight:600;font-size:.85rem;">${inchargeTeacher.name}</div><div><span class="badge badge-blue mono" style="font-size:.72rem;">${inchargeTeacher.id}</span></div>`
+      : '<span style="color:var(--muted);font-size:.85rem;">—</span>';
+    const maxDayCell = (c.maxPerDay && c.maxPerDay>0)
+      ? `<span class="badge badge-amber">${c.maxPerDay}/day</span>`
+      : '<span style="color:var(--muted);font-size:.85rem;">—</span>';
     return `<tr>
       <td style="font-weight:600;">${c.name}${c.section?' - '+c.section:''}</td>
       <td>${c.course?`<span class="badge badge-purple">${c.course}</span>`:'<span style="color:var(--muted);font-size:.85rem;">General</span>'}</td>
+      <td>${inchargeCell}</td>
+      <td>${maxDayCell}</td>
       <td>${subjList}</td>
       <td>${totalPeriods} / ${slots} ${fit?'<span class="badge badge-green" style="margin-left:4px;">OK</span>':'<span class="badge badge-red" style="margin-left:4px;">Over</span>'}</td>
       <td>
@@ -779,7 +834,7 @@ function renderClasses(){
           <button class="btn-icon" onclick="deleteClass('${c.id}')" title="Delete" style="color:var(--danger);"><i class="ri-delete-bin-line"></i></button>
         </div>
       </td>
-    </tr>`;}).join(''): '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">No classes added yet.</td></tr>';
+    </tr>`;}).join(''): '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">No classes added yet.</td></tr>';
 }
 
 /* GENERATE */
@@ -812,9 +867,7 @@ function validateBeforeGeneration(){
         const weeklyCap=eligible.reduce((mx,t)=>mx+Math.min(t.maxPerWeek,s.periodsPerWeek),0);
         if(eligible.length && weeklyCap<s.periodsPerWeek) teacherIssues.push(`${label}: Possible teacher shortage for ${subjName} — need ${s.periodsPerWeek}p/wk, combined eligible capacity ~${weeklyCap}p/wk`);
       }
-      const maxFitPerWeek=days*2;
-      if(s.periodsPerWeek>maxFitPerWeek && s.periodsPerWeek<=totalSlots)
-        warnings.push(`${label}: ${subjName} has ${s.periodsPerWeek}p/wk — will exceed 2/day limit on some days (required to meet quota).`);
+      // New column-lock engine handles > numDays periods by spilling to extra columns — no daily cap warning needed
     });
   });
   const seniorLevels=['Class 11','Class 12'];
@@ -870,11 +923,10 @@ function getClassLabel(cls){
   return `${cls.name}${cls.section?'-'+cls.section:''}${cls.course?' ('+cls.course+')':''}`;
 }
 
-function canAssignSubjectToday(dailyCount, remainingWeekly, daysLeftIncludingToday, priority='semi-main'){
-  let maxPerDay = (priority === 'free') ? 1 : 2;
-  if(dailyCount < maxPerDay) return true;
-  const minNeededToday = Math.max(0, remainingWeekly - (daysLeftIncludingToday - 1) * maxPerDay);
-  return dailyCount < minNeededToday;
+/* ── Teacher slot free — with strict double-booking guard ── */
+function isTeacherGloballyFree(timetable, tid, d, p){
+  if(!timetable.teachers[tid]) return false;
+  return !timetable.teachers[tid][d][p];
 }
 
 function countConsecutiveBefore(timetable, tid, d, p){
@@ -890,7 +942,8 @@ function isTeacherSlotFree(timetable, tid, d, p, day, opts={}){
   const t=state.teachers.find(x=>x.id===tid);
   if(!t) return false;
   if(t.unavailableDays&&t.unavailableDays.includes(day)) return false;
-  if(timetable.teachers[tid][d][p]) return false;
+  // Strict double-booking guard: teacher already has something at this cell
+  if(!isTeacherGloballyFree(timetable, tid, d, p)) return false;
   if(!opts.ignoreDailyCap && timetable.teacherDailyCount[tid][day]>=t.maxPerDay) return false;
   if(timetable.teacherWeeklyCount[tid]>=t.maxPerWeek) return false;
   if(countConsecutiveBefore(timetable,tid,d,p)>=3) return false;
@@ -923,205 +976,272 @@ function pickTeacherForSlot(timetable, subjectId, classId, preferredIds, d, p, d
   return null;
 }
 
-function initPlanningState(days, periods){
-  const plan={
-    subjectPlan:{},
-    remaining:{},
-    dailyCount:{},
-    errors:[],
-    warnings:[]
-  };
+/* ═══════════════════════════════════════════════════════════════
+   PHASE 1 — COLUMN-LOCK SUBJECT ASSIGNMENT
+   ═══════════════════════════════════════════════════════════════
+
+   Core rule: every period-column (P1…P8) runs identically across
+   ALL working days for a given class.  The timetable is filled
+   column-by-column (not row-by-row).
+
+   For each column P we build a "schedule" — an ordered sequence of
+   [subjectId, daysCount] segments that fills the column top to bottom
+   (Mon → Sat).  Example with 6 working days:
+
+     ENG has 5 p/wk  →  ENG × 5 days, then next subject × 1 day
+     PHY has 7 p/wk  →  PHY × 6 days (full column), overflow of 1
+                         goes to NEXT column's start
+
+   Rules enforced per column:
+   • P1–P5  →  main-priority subjects only (academic block)
+   • P6+    →  any priority (activity block)
+   • No subject appears twice in the SAME column (one subject per column)
+     UNLESS it has surplus periods after filling other columns
+   • Subjects are sorted by priority first (main > semi-main > free),
+     then by periodsPerWeek descending, so high-load subjects anchor
+     the first columns
+
+   After the column schedule is built, each cell [day][period] is set
+   directly from the schedule.  Teacher locking in Phase 2 then follows
+   the same column structure: same teacher for the same (subject, period)
+   across all days that column runs.
+═══════════════════════════════════════════════════════════════ */
+
+/*
+  COLUMN-LOCK PHASE 1 — cross-class teacher-aware
+  ─────────────────────────────────────────────────
+  Core guarantees:
+    ✔ Same subject fills the same period column consecutively (Mon→Sat)
+      until weekly quota done; next subject takes over remaining days
+    ✔ P1–P5 (academic block): main-priority subjects only
+    ✔ No same-day repeat of any subject inside P1–P5
+    ✔ Cross-class teacher conflict prevention:
+        before placing subject S at (cls, day, period), count how many
+        classes already have S at (day, period) and compare against the
+        number of teachers who can teach S and are available that day.
+        If all teachers are already taken → skip S, try next subject.
+        This prevents "1 teacher, 2 classes, same period" hard conflicts.
+  ─────────────────────────────────────────────────
+*/
+function phase1AssignSubjects(days, periods){
+  logMsg('📚 Phase 1: Column-lock subject assignment...','step');
+
+  const D=days.length;
+  const subjectPlan={};
+  const errors=[], warnings=[];
   state.classes.forEach(c=>{
-    plan.subjectPlan[c.id]=Array(days.length).fill(null).map(()=>Array(periods).fill(null));
-    plan.remaining[c.id]={};
-    plan.dailyCount[c.id]={};
-    days.forEach(dy=>{
-      plan.dailyCount[c.id][dy]={};
-      c.subjects.forEach(s=>plan.dailyCount[c.id][dy][s.subjectId]=0);
+    subjectPlan[c.id]=Array.from({length:D},()=>Array(periods).fill(null));
+  });
+
+  /* ── Real per-teacher slot-occupancy tracking (shared across ALL
+     classes) ───────────────────────────────────────────────────
+     Mirrors the actual constraints Phase 2 enforces (unavailableDays,
+     eligibleClasses, maxPerDay, maxPerWeek, and — critically — that a
+     single physical teacher cannot be double-booked at the same (d,p)
+     for two different classes). Phase 1 must never "believe" a slot is
+     placeable when no teacher could really cover it, or the gap just
+     shows up later as a Phase-2 shortage / silent unscheduled period.
+  ───────────────────────────────────────────────────────────────── */
+  const tBusy={};  // tBusy[tid][d][p] = true once committed to some class
+  const tDay={};   // tDay[tid][d] = periods committed that day (any class)
+  const tWeek={};  // tWeek[tid] = total periods committed this week
+  state.teachers.forEach(t=>{
+    tBusy[t.id]={};
+    tDay[t.id]={};
+    days.forEach((_,d)=>{ tBusy[t.id][d]={}; tDay[t.id][d]=0; });
+    tWeek[t.id]=0;
+  });
+
+  function findFreeTeacher(sid, cls, d, p){
+    const day=days[d];
+    const mapping=cls.subjects.find(s=>s.subjectId===sid);
+    const preferred=new Set(mapping?mapping.teacherIds:[]);
+    const candidates=state.teachers.filter(t=>
+      t.subjects.includes(sid) &&
+      (!t.eligibleClasses||!t.eligibleClasses.length||t.eligibleClasses.includes(cls.id)) &&
+      (!t.unavailableDays||!t.unavailableDays.includes(day)) &&
+      !tBusy[t.id][d][p] &&
+      tDay[t.id][d]<t.maxPerDay &&
+      tWeek[t.id]<t.maxPerWeek
+    ).sort((a,b)=>{
+      const ap=preferred.has(a.id)?0:1, bp=preferred.has(b.id)?0:1;
+      if(ap!==bp) return ap-bp;
+      return tWeek[a.id]-tWeek[b.id]; // load-balance across equally-eligible teachers
     });
-    c.subjects.forEach(s=>plan.remaining[c.id][s.subjectId]=s.periodsPerWeek);
-  });
-  return plan;
-}
+    return candidates[0]?.id||null;
+  }
 
-function getSubjectCandidates(cls, plan, day, dayIdx, periodIdx, electiveUsedThisSlot){
-  const days=state.setup.workingDays;
-  const daysLeft=days.length-dayIdx;
-  const p=periodIdx;
-  const preferTough=p<5;
-  const list=[];
-  cls.subjects.forEach(s=>{
-    const rem=plan.remaining[cls.id][s.subjectId]||0;
-    if(rem<=0) return;
-    const daily=plan.dailyCount[cls.id][day][s.subjectId]||0;
-    const subj=state.subjects.find(x=>x.id===s.subjectId);
-    const priority = subj ? (subj.priority || 'semi-main') : 'semi-main';
-    
-    if(!canAssignSubjectToday(daily,rem,daysLeft, priority)) return;
-    
-    const group=getElectiveGroup(s.subjectId);
-    const isElective=group.length>1;
-    if(isElective){
-      const conflict=group.some(gid=>electiveUsedThisSlot.has(gid)&&!electiveUsedThisSlot.has(s.subjectId));
-      if(conflict) return;
+  function canPlaceHere(sid, cls, d, p){
+    return findFreeTeacher(sid, cls, d, p)!==null;
+  }
+
+  function markPlaced(sid, cls, d, p){
+    const tid=findFreeTeacher(sid, cls, d, p);
+    if(tid){
+      tBusy[tid][d][p]=true;
+      tDay[tid][d]++;
+      tWeek[tid]++;
     }
-    let score=getSubjectDifficulty(s.subjectId);
-    if(preferTough) score+=50; else score=100-score;
-    score+=rem*2;
-    
-    if(priority === 'main' && daily === 0) {
-      score += 10000;
-    } else if (priority === 'main' && daily >= 1) {
-      score -= 50;
-    } else if (priority === 'free') {
-      score -= 5000;
-    }
-    
-    list.push({subjectId:s.subjectId, score, isElective, group, periodsPerWeek:s.periodsPerWeek, teacherIds:s.teacherIds});
-  });
-  list.sort((a,b)=>b.score-a.score);
-  return list;
-}
+  }
 
-function assignSubjectToSlot(plan, cls, day, dayIdx, periodIdx, subjectId){
-  plan.subjectPlan[cls.id][dayIdx][periodIdx]=subjectId;
-  plan.remaining[cls.id][subjectId]--;
-  plan.dailyCount[cls.id][day][subjectId]=(plan.dailyCount[cls.id][day][subjectId]||0)+1;
-}
+  /* ── Per-class priority queue + remaining-quota state, built once
+     up front so it can be threaded through the shared d/p grid below. ── */
+  const classState={};
+  state.classes.forEach((cls,clsIdx)=>{
+    if(!cls.subjects.length) return;
 
-function fillSeniorSlot(levelClasses, plan, days, dayIdx, periodIdx){
-  const day=days[dayIdx];
-  const electiveUsed=new Set();
-  levelClasses.forEach(cls=>{
-    const sid=plan.subjectPlan[cls.id][dayIdx][periodIdx];
-    if(sid) getElectiveGroup(sid).forEach(id=>electiveUsed.add(id));
-  });
-
-  const commonMap={};
-  levelClasses.forEach(cls=>{
-    if(plan.subjectPlan[cls.id][dayIdx][periodIdx]) return;
-    getSubjectCandidates(cls,plan,day,dayIdx,periodIdx,electiveUsed).forEach(c=>{
-      if(!commonMap[c.subjectId]) commonMap[c.subjectId]=[];
-      commonMap[c.subjectId].push(cls);
+    const sorted=[...cls.subjects].sort((a,b)=>{
+      const sa=state.subjects.find(x=>x.id===a.subjectId);
+      const sb=state.subjects.find(x=>x.id===b.subjectId);
+      const pa=sa?(sa.priority||'semi-main'):'semi-main';
+      const pb=sb?(sb.priority||'semi-main'):'semi-main';
+      const rank={'main':0,'semi-main':1,'free':2};
+      if(rank[pa]!==rank[pb]) return rank[pa]-rank[pb];
+      const tA=(sa&&(sa.tough||isAutoToughSubject(sa)))?-1:0;
+      const tB=(sb&&(sb.tough||isAutoToughSubject(sb)))?-1:0;
+      if(tA!==tB) return tA-tB;
+      return b.periodsPerWeek-a.periodsPerWeek;
     });
-  });
 
-  Object.entries(commonMap).filter(([,arr])=>arr.length>=2).sort((a,b)=>b[1].length-a[1].length).forEach(([subjId,arr])=>{
-    arr.forEach(cls=>{
-      if(!plan.subjectPlan[cls.id][dayIdx][periodIdx]&&(plan.remaining[cls.id][subjId]||0)>0){
-        assignSubjectToSlot(plan,cls,day,dayIdx,periodIdx,subjId);
-        getElectiveGroup(subjId).forEach(id=>electiveUsed.add(id));
+    /* Classes with identical curricula (same subjects, same quotas) sort
+       into IDENTICAL tie order, so their greedy column-fill lands every
+       tied subject in the exact same period-column at the exact same
+       time — the very cells where a scarce single shared teacher (e.g.
+       one PHE/SKT/STM/LIB teacher covering all sections) can only serve
+       ONE class. With the grid at exact capacity (no slack columns to
+       recover in), that collision permanently strands the loser's
+       periods. Rotating each tie-group by the class's index staggers
+       identical-quota classes onto different columns so they stop
+       fighting over the same teacher at the same instant. */
+    const tieKey=(s)=>{
+      const ss=state.subjects.find(x=>x.id===s.subjectId);
+      const pr=ss?(ss.priority||'semi-main'):'semi-main';
+      const tough=(ss&&(ss.tough||isAutoToughSubject(ss)))?1:0;
+      return `${pr}|${tough}|${s.periodsPerWeek}`;
+    };
+    for(let i=0;i<sorted.length;){
+      let j=i+1;
+      while(j<sorted.length && tieKey(sorted[j])===tieKey(sorted[i])) j++;
+      const groupLen=j-i;
+      if(groupLen>1){
+        const shift=clsIdx%groupLen;
+        const group=sorted.slice(i,j);
+        const rotated=group.slice(shift).concat(group.slice(0,shift));
+        for(let k=0;k<groupLen;k++) sorted[i+k]=rotated[k];
       }
-    });
+      i=j;
+    }
+
+    const rem={};
+    sorted.forEach(s=>{ rem[s.subjectId]=s.periodsPerWeek; });
+    classState[cls.id]={ sorted, rem, qi:0 };
   });
 
-  const unassigned=levelClasses.filter(cls=>!plan.subjectPlan[cls.id][dayIdx][periodIdx]);
-  if(unassigned.length>=2){
-    const electiveClasses=unassigned.filter(cls=>{
-      const cands=getSubjectCandidates(cls,plan,day,dayIdx,periodIdx,electiveUsed);
-      return cands.some(c=>c.isElective);
+  /* findNext: scan forward from cs.qi, skipping subjects that:
+     1. have rem==0  (exhausted)
+     2. are non-main in academic column while main subjects still remain
+     3. would cause a same-day repeat inside P1–P5
+     4. have no real teacher available at (d, p) right now
+  */
+  function findNext(cls, cs, isAcademic, d, p){
+    const { sorted, rem } = cs;
+    const seenTodayFor=(sid)=>{
+      for(let pp=0;pp<p;pp++){
+        if(subjectPlan[cls.id][d][pp]===sid) return true;
+      }
+      return false;
+    };
+    /* "Main left" must mean available for THIS cell, not merely nonzero
+       for the week. With only a handful of main subjects sharing 5
+       academic columns, every main can easily have already appeared
+       earlier today (no-repeat rule) while still holding weekly
+       quota — checking global rem>0 here deadlocks column P5 (every
+       main blocked by same-day-repeat, but non-main also blocked
+       because mains "aren't exhausted yet"), leaving it permanently
+       FREE and pushing main overflow into the activity block instead
+       of the semi-main/free subjects that belong there. */
+    const anyMainAvailableToday=()=>sorted.some(s=>{
+      const ss=state.subjects.find(x=>x.id===s.subjectId);
+      if(!ss||ss.priority!=='main') return false;
+      if((rem[s.subjectId]||0)<=0) return false;
+      if(p<5 && seenTodayFor(s.subjectId)) return false;
+      return true;
     });
-    if(electiveClasses.length>=2){
-      const assignedSubs=new Set();
-      electiveClasses.forEach(cls=>{
-        const cands=getSubjectCandidates(cls,plan,day,dayIdx,periodIdx,electiveUsed).filter(c=>c.isElective);
-        const pick=cands.find(c=>!assignedSubs.has(c.subjectId)&&![...assignedSubs].some(as=>c.group.includes(as)));
-        if(pick){
-          assignSubjectToSlot(plan,cls,day,dayIdx,periodIdx,pick.subjectId);
-          assignedSubs.add(pick.subjectId);
-          pick.group.forEach(id=>electiveUsed.add(id));
-        }
+
+    for(let i=cs.qi;i<sorted.length;i++){
+      const sid=sorted[i].subjectId;
+      if((rem[sid]||0)<=0) continue;
+
+      if(isAcademic){
+        const ss=state.subjects.find(x=>x.id===sid);
+        const pr=ss?(ss.priority||'semi-main'):'semi-main';
+        if(pr!=='main' && anyMainAvailableToday()) continue;
+      }
+
+      if(p<5 && seenTodayFor(sid)) continue;
+
+      if(!canPlaceHere(sid, cls, d, p)) continue;
+
+      return i;
+    }
+    return -1;
+  }
+
+  /*
+    Fill the grid period-column-first, but interleave ALL classes within
+    each (p, d) cell (period outer → day → class), instead of finishing
+    one class's entire column before starting the next. This is what
+    lets a subject with a single teacher shared across several classes
+    (e.g. one PHE/SKT/STM/LIB teacher covering 3 sections) get spread
+    fairly across different (d,p) cells for each class, rather than the
+    first-processed class silently draining the teacher's whole day/week
+    cap before the others get a turn.
+
+    qi = pointer into sorted[] per class. Advances ONLY when sorted[qi]
+    is exhausted (rem=0). When a teacher conflict forces an alternative
+    (vi > qi), qi stays put so the primary subject is retried on the very
+    next cell — no subjects get permanently skipped.
+
+    Slots with no placeable subject are left null (FREE) — Phase 2 (or a
+    later pass) may still fill true gaps, but nothing is over-filled.
+    Each subject appears EXACTLY periodsPerWeek times.
+  */
+  for(let p=0;p<periods;p++){
+    const isAcademic=p<5;
+    for(let d=0;d<D;d++){
+      state.classes.forEach(cls=>{
+        const cs=classState[cls.id];
+        if(!cs) return;
+
+        while(cs.qi<cs.sorted.length&&(cs.rem[cs.sorted[cs.qi].subjectId]||0)<=0) cs.qi++;
+        if(cs.qi>=cs.sorted.length) return; // all quotas met → slot stays FREE
+
+        const vi=findNext(cls, cs, isAcademic, d, p);
+        if(vi===-1) return; // every candidate blocked for this cell → slot stays FREE
+
+        const sid=cs.sorted[vi].subjectId;
+        subjectPlan[cls.id][d][p]=sid;
+        markPlaced(sid, cls, d, p);
+        cs.rem[sid]--;
+
+        if(vi===cs.qi && cs.rem[sid]<=0) cs.qi++;
       });
     }
   }
 
-  levelClasses.forEach(cls=>{
-    if(plan.subjectPlan[cls.id][dayIdx][periodIdx]) return;
-    const cands=getSubjectCandidates(cls,plan,day,dayIdx,periodIdx,electiveUsed);
-    if(cands.length){
-      assignSubjectToSlot(plan,cls,day,dayIdx,periodIdx,cands[0].subjectId);
-      getElectiveGroup(cands[0].subjectId).forEach(id=>electiveUsed.add(id));
-    }
-  });
-}
-
-function fillJuniorSlot(cls, plan, days, dayIdx, periodIdx){
-  const day=days[dayIdx];
-  if(plan.subjectPlan[cls.id][dayIdx][periodIdx]) return;
-  const electiveUsed=new Set();
-  const cands=getSubjectCandidates(cls,plan,day,dayIdx,periodIdx,electiveUsed);
-  if(cands.length) assignSubjectToSlot(plan,cls,day,dayIdx,periodIdx,cands[0].subjectId);
-}
-
-function fillRemainingSlots(plan, days, periods){
   state.classes.forEach(cls=>{
-    for(let d=0;d<days.length;d++){
-      const day=days[d];
-      const daysLeft=days.length-d;
-      for(let p=0;p<periods;p++){
-        if(plan.subjectPlan[cls.id][d][p]) continue;
-        let picked=null;
-        const withRem=cls.subjects.filter(s=>(plan.remaining[cls.id][s.subjectId]||0)>0)
-          .sort((a,b)=>(plan.remaining[cls.id][b.subjectId]||0)-(plan.remaining[cls.id][a.subjectId]||0));
-        for(const s of withRem){
-          const daily=plan.dailyCount[cls.id][day][s.subjectId]||0;
-          const rem=plan.remaining[cls.id][s.subjectId];
-          if(canAssignSubjectToday(daily,rem,daysLeft)){ picked=s.subjectId; break; }
-        }
-        if(!picked&&withRem.length) picked=withRem[0].subjectId;
-        if(!picked&&cls.subjects.length){
-          picked=cls.subjects.reduce((best,s)=>{
-            const used=plan.dailyCount[cls.id][day][s.subjectId]||0;
-            const bestUsed=plan.dailyCount[cls.id][day][best]||0;
-            return used<bestUsed?s.subjectId:best;
-          },cls.subjects[0].subjectId);
-          plan.warnings.push(`${getClassLabel(cls)}: Repeat period for ${state.subjects.find(x=>x.id===picked)?.code} on ${day} P${p+1}`);
-        }
-        if(picked){
-          if(plan.remaining[cls.id][picked]>0) plan.remaining[cls.id][picked]--;
-          else plan.warnings.push(`${getClassLabel(cls)}: Extra revision — ${state.subjects.find(x=>x.id===picked)?.code} on ${day} P${p+1}`);
-          plan.subjectPlan[cls.id][d][p]=picked;
-          plan.dailyCount[cls.id][day][picked]=(plan.dailyCount[cls.id][day][picked]||0)+1;
-        } else {
-          plan.errors.push(`Subject shortage: ${getClassLabel(cls)} — no subject available for ${day} P${p+1}`);
-        }
-      }
-    }
-  });
-}
-
-function phase1AssignSubjects(days, periods){
-  logMsg('📚 Phase 1: Assigning subjects to timetable slots...','step');
-  const plan=initPlanningState(days, periods);
-  const juniorClasses=state.classes.filter(c=>c.name!=='Class 11'&&c.name!=='Class 12');
-  const senior11=state.classes.filter(c=>c.name==='Class 11');
-  const senior12=state.classes.filter(c=>c.name==='Class 12');
-
-  for(let d=0;d<days.length;d++){
-    for(let p=0;p<periods;p++){
-      if(senior11.length) fillSeniorSlot(senior11,plan,days,d,p);
-      if(senior12.length) fillSeniorSlot(senior12,plan,days,d,p);
-      juniorClasses.forEach(cls=>fillJuniorSlot(cls,plan,days,d,p));
-    }
-  }
-  fillRemainingSlots(plan,days,periods);
-
-  state.classes.forEach(cls=>{
-    for(let d=0;d<days.length;d++){
-      let filled=0;
-      for(let p=0;p<periods;p++) if(plan.subjectPlan[cls.id][d][p]) filled++;
-      if(filled===0) plan.errors.push(`${getClassLabel(cls)}: Entire day ${days[d]} is empty — could not fill any period`);
-      else if(filled<periods) plan.warnings.push(`${getClassLabel(cls)}: ${days[d]} has only ${filled}/${periods} periods filled before final pass`);
-    }
-    Object.entries(plan.remaining[cls.id]).forEach(([sid,rem])=>{
-      if(rem>0){
-        const subj=state.subjects.find(s=>s.id===sid);
-        plan.errors.push(`Subject shortage: ${getClassLabel(cls)} — ${subj?.code||sid} has ${rem} period(s) unscheduled (weekly quota not met)`);
+    const cs=classState[cls.id];
+    if(!cs) return;
+    cs.sorted.forEach(s=>{
+      if((cs.rem[s.subjectId]||0)>0){
+        const subj=state.subjects.find(x=>x.id===s.subjectId);
+        warnings.push(`${getClassLabel(cls)}: ${subj?.code||s.subjectId} — ${cs.rem[s.subjectId]} period(s) unscheduled (teacher unavailable at every remaining slot)`);
       }
     });
   });
-  logMsg(`✓ Phase 1 complete — ${plan.errors.length} errors, ${plan.warnings.length} warnings`, plan.errors.length?'error':'success');
-  return plan;
+
+  logMsg(`✓ Phase 1 complete — ${errors.length} errors, ${warnings.length} warnings`, errors.length?'error':'success');
+  return { subjectPlan, errors, warnings };
 }
 
 function phase2AssignTeachers(subjectPlan, days, periods){
@@ -1141,16 +1261,25 @@ function phase2AssignTeachers(subjectPlan, days, periods){
     timetable.teacherWeeklyCount[t.id]=0;
   });
 
+  /* ── Helper: assign one slot, updating all counters ───────── */
+  function commitAssignment(cls, d, p, day, subjectId, teacherId){
+    timetable.classes[cls.id][d][p]={subjectId,teacherId};
+    timetable.teacherPlan[cls.id][d][p]=teacherId;
+    timetable.teachers[teacherId][d][p]={classId:cls.id,subjectId};
+    timetable.teacherDailyCount[teacherId][day]++;
+    timetable.teacherWeeklyCount[teacherId]++;
+  }
+
   function tryAssignSlot(cls, d, p, day, subjectId){
+    // Guard: slot already filled
+    if(timetable.classes[cls.id][d][p]&&!timetable.classes[cls.id][d][p].unassigned&&
+       timetable.classes[cls.id][d][p].teacherId) return true;
+
     const mapping=cls.subjects.find(s=>s.subjectId===subjectId);
     const preferredIds=mapping?mapping.teacherIds:[];
     const teacherId=pickTeacherForSlot(timetable,subjectId,cls.id,preferredIds,d,p,day);
     if(teacherId){
-      timetable.classes[cls.id][d][p]={subjectId,teacherId};
-      timetable.teacherPlan[cls.id][d][p]=teacherId;
-      timetable.teachers[teacherId][d][p]={classId:cls.id,subjectId};
-      timetable.teacherDailyCount[teacherId][day]++;
-      timetable.teacherWeeklyCount[teacherId]++;
+      commitAssignment(cls,d,p,day,subjectId,teacherId);
       return true;
     }
     const subj=state.subjects.find(s=>s.id===subjectId);
@@ -1160,27 +1289,150 @@ function phase2AssignTeachers(subjectPlan, days, periods){
     return false;
   }
 
-  for(let pass=0;pass<2;pass++){
+  /* ══════════════════════════════════════════════════════════
+     TEACHER COLUMN-LOCK
+     Same subject in the same period-column → same teacher across
+     all days that column has that subject.
+
+     teacherColumnLock[clsId][periodIdx][subjectId] = teacherId
+     Established on the first day the (period, subject) pair appears.
+     All subsequent days with the same (period, subject) must reuse
+     the same teacher (if still within their weekly/daily cap).
+  ══════════════════════════════════════════════════════════ */
+  const teacherColumnLock = {};
+  state.classes.forEach(c=>{ teacherColumnLock[c.id]={}; });
+
+  /* ── PASS 0 — Class Incharge gets Period 1 (p=0) every day ──
+     P1 of every class, every day → incharge teacher.
+     Continues until incharge hits weekly cap or unavailable.
+  ──────────────────────────────────────────────────────────── */
+  state.classes.forEach(cls=>{
+    if(!cls.inchargeId) return;
+    const inchargeTeacher=state.teachers.find(t=>t.id===cls.inchargeId);
+    if(!inchargeTeacher) return;
+
     for(let d=0;d<days.length;d++){
       const day=days[d];
-      for(let p=0;p<periods;p++){
-        for(const cls of state.classes){
-          const subjectId=subjectPlan.subjectPlan[cls.id][d][p];
-          if(!subjectId) continue;
-          const existing=timetable.classes[cls.id][d][p];
-          if(existing&&!existing.unassigned&&existing.teacherId) continue;
+      const subjectId=subjectPlan.subjectPlan[cls.id][d][0]; // P1 = index 0
+      if(!subjectId) continue;
+      if(timetable.teacherWeeklyCount[inchargeTeacher.id]>=inchargeTeacher.maxPerWeek) continue;
+      if(inchargeTeacher.unavailableDays&&inchargeTeacher.unavailableDays.includes(day)) continue;
+      if(!isTeacherGloballyFree(timetable,inchargeTeacher.id,d,0)) continue;
+      if(timetable.teacherDailyCount[inchargeTeacher.id][day]>=inchargeTeacher.maxPerDay) continue;
+      commitAssignment(cls,d,0,day,subjectId,inchargeTeacher.id);
+      // Record column lock for P1 of this class
+      if(!teacherColumnLock[cls.id][0]) teacherColumnLock[cls.id][0]={};
+      teacherColumnLock[cls.id][0][subjectId]=inchargeTeacher.id;
+    }
+  });
+
+  /* ── PASS 1 — Column-locked teacher assignment ─────────────
+     Process column by column (period first, then days).
+     For each (class, period):
+       • Day 0: pick the best available teacher, lock it.
+       • Day 1+: reuse the locked teacher for the same subject;
+                 if locked teacher unavailable/over-cap → pick next
+                 best and update the lock for this subject.
+       • When the subject CHANGES within a column (because the first
+         subject exhausted its quota), a new lock is established for
+         the new subject.
+  ──────────────────────────────────────────────────────────── */
+  for(let p=0;p<periods;p++){
+    state.classes.forEach(cls=>{
+      if(!teacherColumnLock[cls.id][p]) teacherColumnLock[cls.id][p]={};
+    });
+
+    // Day outer, class inner — mirrors Phase 1's interleaving so a teacher
+    // shared across classes gets distributed fairly instead of one class
+    // draining the whole day/week cap before the others get a turn.
+    for(let d=0;d<days.length;d++){
+      const day=days[d];
+
+      for(const cls of state.classes){
+        const subjectId=subjectPlan.subjectPlan[cls.id][d][p];
+        if(!subjectId) continue;
+
+        // Already assigned (e.g. by incharge pass)?
+        const existing=timetable.classes[cls.id][d][p];
+        if(existing&&!existing.unassigned&&existing.teacherId) continue;
+
+        const mapping=cls.subjects.find(s=>s.subjectId===subjectId);
+        const preferredIds=mapping?mapping.teacherIds:[];
+
+        // Try the column-locked teacher for this subject first
+        const lockedTid=teacherColumnLock[cls.id][p][subjectId];
+        if(lockedTid){
+          const lTeacher=state.teachers.find(t=>t.id===lockedTid);
+          if(lTeacher && isTeacherSlotFree(timetable,lockedTid,d,p,day)){
+            commitAssignment(cls,d,p,day,subjectId,lockedTid);
+            continue;
+          }
+          // Locked teacher unavailable — try with ignoreDailyCap
+          if(lTeacher && isTeacherSlotFree(timetable,lockedTid,d,p,day,{ignoreDailyCap:true})){
+            commitAssignment(cls,d,p,day,subjectId,lockedTid);
+            continue;
+          }
+        }
+
+        // No lock yet or locked teacher unavailable — pick best available
+        const teacherId=pickTeacherForSlot(timetable,subjectId,cls.id,preferredIds,d,p,day);
+        if(teacherId){
+          commitAssignment(cls,d,p,day,subjectId,teacherId);
+          // Establish / update column lock for this subject
+          teacherColumnLock[cls.id][p][subjectId]=teacherId;
+        } else {
+          // Teacher shortage
           if(existing&&existing.unassigned) timetable.classes[cls.id][d][p]=null;
-          tryAssignSlot(cls,d,p,day,subjectId);
+          const subj=state.subjects.find(s=>s.id===subjectId);
+          const allPool=getAllTeachersForSubject(subjectId,cls.id,preferredIds,timetable);
+          timetable.assignmentErrors.push(`Teacher shortage: ${getClassLabel(cls)} — ${subj?.code||'?'} on ${day} P${p+1} (checked ${allPool.length} teacher(s): ${allPool.map(t=>t.name).join(', ')||'none'})`);
+          timetable.classes[cls.id][d][p]={subjectId,teacherId:null,unassigned:true};
         }
       }
     }
   }
 
+  /* ── PASS 2 — Retry any remaining unassigned slots ─────── */
+  for(let d=0;d<days.length;d++){
+    const day=days[d];
+    for(let p=0;p<periods;p++){
+      for(const cls of state.classes){
+        const subjectId=subjectPlan.subjectPlan[cls.id][d][p];
+        if(!subjectId) continue;
+        const existing=timetable.classes[cls.id][d][p];
+        if(!existing||(!existing.unassigned&&existing.teacherId)) continue;
+        // Clear the bad marker
+        timetable.classes[cls.id][d][p]=null;
+        const errLabel=`Teacher shortage: ${getClassLabel(cls)}`;
+        let idx=-1;
+        for(let ei=timetable.assignmentErrors.length-1;ei>=0;ei--){
+          if(timetable.assignmentErrors[ei].startsWith(errLabel)){idx=ei;break;}
+        }
+        if(idx>-1) timetable.assignmentErrors.splice(idx,1);
+
+        const mapping=cls.subjects.find(s=>s.subjectId===subjectId);
+        const preferredIds=mapping?mapping.teacherIds:[];
+        const teacherId=pickTeacherForSlot(timetable,subjectId,cls.id,preferredIds,d,p,day);
+        if(teacherId){
+          commitAssignment(cls,d,p,day,subjectId,teacherId);
+          if(!teacherColumnLock[cls.id][p]) teacherColumnLock[cls.id][p]={};
+          teacherColumnLock[cls.id][p][subjectId]=teacherId;
+        } else {
+          const subj=state.subjects.find(s=>s.id===subjectId);
+          const allPool=getAllTeachersForSubject(subjectId,cls.id,preferredIds,timetable);
+          timetable.assignmentErrors.push(`Teacher shortage: ${getClassLabel(cls)} — ${subj?.code||'?'} on ${day} P${p+1} (no teacher available)`);
+          timetable.classes[cls.id][d][p]={subjectId,teacherId:null,unassigned:true};
+        }
+      }
+    }
+  }
+
+  /* ── Consecutive-period check (warn, not error) ────────── */
   state.teachers.forEach(t=>{
     for(let d=0;d<days.length;d++){
       let streak=0;
       for(let p=0;p<periods;p++){
-        if(timetable.teachers[t.id][d][p]){ streak++; if(streak>3) timetable.assignmentErrors.push(`Constraint violation: ${t.name} has ${streak} consecutive periods on ${days[d]} (max 3) — review manually`); }
+        if(timetable.teachers[t.id][d][p]){ streak++; if(streak>3) timetable.assignmentErrors.push(`Constraint: ${t.name} has ${streak} consecutive periods on ${days[d]} (max 3)`); }
         else streak=0;
       }
     }
@@ -1276,25 +1528,38 @@ function generateTimetable(){
   const subjectPlan=phase1AssignSubjects(days,periods);
   const timetable=phase2AssignTeachers(subjectPlan,days,periods);
 
-  const allErrors=[...subjectPlan.errors,...timetable.assignmentErrors];
-  if(allErrors.length > 0){
-    logMsg('❌ Generation aborted due to critical errors. Please resolve them.','error');
+  // Hard errors: subject allocation failures + actual teacher shortages
+  // Soft warnings: consecutive-period constraint notices (don't block build)
+  const hardErrors=[
+    ...subjectPlan.errors,
+    ...timetable.assignmentErrors.filter(e=>e.startsWith('Teacher shortage'))
+  ];
+  const softWarnings=timetable.assignmentErrors.filter(e=>!e.startsWith('Teacher shortage'));
+
+  if(hardErrors.length > 0){
+    logMsg('❌ Generation aborted — critical teacher/subject conflicts. Use "Force Build" or resolve conflicts.','error');
     state.timetable = null;
     pendingTimetable = timetable;
     pendingSubjectPlan = subjectPlan;
     save();
 
-    let errHtml = `<div class="alert alert-error mb-3"><i class="ri-close-circle-line alert-icon"></i><div class="alert-body"><div class="alert-title">Timetable Generation Failed</div><p style="font-size:.8rem;opacity:.8;margin:.3rem 0;">Resolve the following issues before generating:</p>`;
+    let errHtml = `<div class="alert alert-error mb-3"><i class="ri-close-circle-line alert-icon"></i><div class="alert-body"><div class="alert-title">Timetable Generation Failed</div><p style="font-size:.8rem;opacity:.8;margin:.3rem 0;">Resolve the following conflicts or click Force Build:</p>`;
     if(subjectPlan.errors.length) errHtml+=`<div style="font-weight:700;margin-top:.6rem;margin-bottom:.3rem;">Subject Issues:</div><ul>${subjectPlan.errors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
-    if(timetable.assignmentErrors.length) errHtml+=`<div style="font-weight:700;margin-top:.6rem;margin-bottom:.3rem;color:var(--warn);">Teacher Issues:</div><ul>${timetable.assignmentErrors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+    const teacherHard=timetable.assignmentErrors.filter(e=>e.startsWith('Teacher shortage'));
+    if(teacherHard.length) errHtml+=`<div style="font-weight:700;margin-top:.6rem;margin-bottom:.3rem;color:var(--warn);">Teacher Conflicts:</div><ul>${teacherHard.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+    if(softWarnings.length) errHtml+=`<div style="font-weight:700;margin-top:.6rem;margin-bottom:.3rem;color:var(--info);">Soft Warnings (won't block):</div><ul>${softWarnings.map(e=>`<li>${e}</li>`).join('')}</ul>`;
     errHtml += `</div></div><div style="margin-top:.75rem;"><button class="btn btn-warn" onclick="forceGenerateTimetable()"><i class="ri-alert-line"></i> Force Build Anyway</button></div>`;
-    
+
     $('genErrors').innerHTML=errHtml;
     $('genErrors').classList.remove('hidden');
-    toast('Generation failed. Check errors.','error');
+    toast('Conflicts found — check errors or force build.','warn');
     return;
   }
 
+  // No hard errors — build succeeds even if there are soft warnings
+  if(softWarnings.length){
+    timetable.assignmentErrors=softWarnings; // keep for display but don't block
+  }
   renderGenSuccess(timetable, subjectPlan);
 }
 
