@@ -55,19 +55,19 @@ function confirmReset(){
 }
 
 /* ── Tab Navigation ─────────────────────────────────────── */
+function goToTab(tabId){
+  document.querySelectorAll('.tab[data-tab]').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll(`.tab[data-tab="${tabId}"]`).forEach(x=>x.classList.add('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.add('hidden'));
+  $('tab-'+tabId).classList.remove('hidden');
+  if(tabId==='teachers') renderTeachers();
+  if(tabId==='subjects') renderSubjects();
+  if(tabId==='classes') renderClasses();
+  if(tabId==='generate') renderGenerateStats();
+  if(tabId==='view') renderViewTab();
+}
 document.querySelectorAll('.tab[data-tab]').forEach(t=>{
-  t.addEventListener('click',()=>{
-    const tabId = t.dataset.tab;
-    document.querySelectorAll('.tab[data-tab]').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll(`.tab[data-tab="${tabId}"]`).forEach(x=>x.classList.add('active'));
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.add('hidden'));
-    $('tab-'+tabId).classList.remove('hidden');
-    if(tabId==='teachers') renderTeachers();
-    if(tabId==='subjects') renderSubjects();
-    if(tabId==='classes') renderClasses();
-    if(tabId==='generate') renderGenerateStats();
-    if(tabId==='view') renderViewTab();
-  });
+  t.addEventListener('click',()=>goToTab(t.dataset.tab));
 });
 
 /* ── Toast ──────────────────────────────────────────────── */
@@ -85,8 +85,80 @@ function toast(msg, type='success'){
   el.innerHTML = `<i class="${icon}"></i><div class="toast-body">${msg}</div><button class="toast-dismiss" onclick="this.closest('.toast').remove()"><i class="ri-close-line"></i></button>`;
   $('toastContainer').appendChild(el);
   const remove = () => { el.classList.add('removing'); setTimeout(()=>el.remove(), 260); };
-  const timer = setTimeout(remove, 3800);
-  el.querySelector('.toast-dismiss').addEventListener('click', ()=>{ clearTimeout(timer); });
+  // Only success toasts auto-dismiss — warnings/errors stay until the user closes them.
+  const timer = type==='success' ? setTimeout(remove, 3800) : null;
+  el.querySelector('.toast-dismiss').addEventListener('click', ()=>{ if(timer) clearTimeout(timer); });
+  pushNotification(msg, type);
+}
+
+/* ── Notification Dropdown ──────────────────────────────────
+   Logs every toast() call into a small in-memory history so the
+   user can review recent activity from the bell icon in the header.
+───────────────────────────────────────────────────────────── */
+const NOTIF_LIMIT = 50;
+let notifications = [];
+
+function pushNotification(msg, type){
+  notifications.unshift({ msg, type, ts: Date.now(), read: false });
+  if(notifications.length > NOTIF_LIMIT) notifications.length = NOTIF_LIMIT;
+  updateNotifBadge();
+  const dd = $('notifDropdown');
+  if(dd && !dd.classList.contains('hidden')) renderNotifList();
+}
+
+function updateNotifBadge(){
+  const unread = notifications.filter(n => !n.read).length;
+  ['notifBadgeDesktop','notifBadgeMobile'].forEach(id=>{
+    const el = $(id);
+    if(!el) return;
+    el.textContent = unread>99 ? '99+' : String(unread);
+    el.classList.toggle('hidden', unread===0);
+  });
+}
+
+function renderNotifList(){
+  const list = $('notifList');
+  if(!list) return;
+  if(!notifications.length){
+    list.innerHTML = '<div class="notif-empty">No notifications yet.</div>';
+    return;
+  }
+  list.innerHTML = notifications.map(n => `
+    <div class="notif-item notif-${n.type||'info'}">
+      <i class="${TOAST_ICONS[n.type] || TOAST_ICONS.info}"></i>
+      <div class="notif-item-body">
+        <div class="notif-item-msg">${n.msg}</div>
+        <div class="notif-item-time">${new Date(n.ts).toLocaleString()}</div>
+      </div>
+    </div>`).join('');
+}
+
+function toggleNotifDropdown(e){
+  if(e){ e.stopPropagation(); }
+  const dd = $('notifDropdown');
+  if(!dd) return;
+  const isHidden = dd.classList.contains('hidden');
+  if(isHidden){
+    dd.classList.remove('hidden');
+    renderNotifList();
+    notifications.forEach(n => n.read = true);
+    updateNotifBadge();
+    const close = ev => {
+      if(!dd.contains(ev.target) && !ev.target.closest('#notifBtnDesktop') && !ev.target.closest('#notifBtnMobile')){
+        dd.classList.add('hidden');
+        document.removeEventListener('click', close);
+      }
+    };
+    setTimeout(()=>document.addEventListener('click', close), 50);
+  } else {
+    dd.classList.add('hidden');
+  }
+}
+
+function clearNotifications(){
+  notifications = [];
+  renderNotifList();
+  updateNotifBadge();
 }
 
 function closeModal(id){ $(id).classList.add('hidden'); }
@@ -140,6 +212,15 @@ function showInfoModal(title, msg) {
    Call after any dynamic HTML that contains <select> elements.
 ───────────────────────────────────────────────────────────── */
 function initCustomSelects(root = document) {
+  // Already-initialized selects just need their display resynced to
+  // whatever value was set programmatically since last render (modal
+  // reopen, editing a different row, etc.) — .value assignment fires
+  // no 'change' event and mutates no DOM attribute, so nothing else
+  // would ever re-run syncDisplay() for them.
+  root.querySelectorAll('select.cs-initialized').forEach(sel => {
+    if (sel._csSync) sel._csSync();
+  });
+
   root.querySelectorAll('select:not(.cs-initialized)').forEach(sel => {
     sel.classList.add('cs-initialized');
 
@@ -217,6 +298,7 @@ function initCustomSelects(root = document) {
     const obs = new MutationObserver(() => { buildOptions(); syncDisplay(); });
     obs.observe(sel, { childList: true, subtree: true, attributes: true });
 
+    sel._csSync = () => { buildOptions(); syncDisplay(); };
     buildOptions();
     syncDisplay();
   });
@@ -285,12 +367,32 @@ function loadSetupUI(){
 loadSetupUI();
 
 /* TEACHERS */
+function clampMaxPerDay(el){
+  const v=parseInt(el.value);
+  if(!isNaN(v) && v>8) el.value=8;
+}
 function toggleSelectAll(containerId, btn) {
   const checkboxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]`);
   if(checkboxes.length === 0) return;
   const allChecked = Array.from(checkboxes).every(cb => cb.checked);
   checkboxes.forEach(cb => cb.checked = !allChecked);
   btn.textContent = allChecked ? 'Select All' : 'Deselect All';
+}
+// Keep the Select All / Deselect All button in sync when the user manually
+// (un)checks an individual option afterwards — bind once per container,
+// survives re-renders since the container element itself isn't replaced.
+function bindCheckboxGroupSync(containerId){
+  const container=document.getElementById(containerId);
+  if(!container || container._syncBound) return;
+  container._syncBound=true;
+  container.addEventListener('change', e=>{
+    if(e.target.type!=='checkbox') return;
+    const checkboxes=container.querySelectorAll('input[type="checkbox"]');
+    if(!checkboxes.length) return;
+    const allChecked=Array.from(checkboxes).every(cb=>cb.checked);
+    const btn=container.previousElementSibling && container.previousElementSibling.querySelector('button');
+    if(btn) btn.textContent = allChecked ? 'Deselect All' : 'Select All';
+  });
 }
 
 function nextTeacherId(){
@@ -328,6 +430,8 @@ function openTeacherModal(id){
     </label>`).join('');
   $('teacherModal').classList.remove('hidden');
   refreshSelects($('teacherModal'));
+  bindCheckboxGroupSync('tSubjects');
+  bindCheckboxGroupSync('tClasses');
 }
 function saveTeacher(){
   const id=$('tId').value.trim()||nextTeacherId();
@@ -339,21 +443,38 @@ function saveTeacher(){
   const subjects=[...document.querySelectorAll('#tSubjects input:checked')].map(x=>x.value);
   const eligibleClasses=[...document.querySelectorAll('#tClasses input:checked')].map(x=>x.value);
   const unavailableDays=[...document.querySelectorAll('#tUnavailable input:checked')].map(x=>x.value);
-  const data={ id, name, level:$('tLevel').value, subjects, eligibleClasses, maxPerDay:parseInt($('tMaxDay').value)||6, maxPerWeek:parseInt($('tMaxWeek').value)||30, unavailableDays };
-  
+  const maxPerDay=Math.min(parseInt($('tMaxDay').value)||6, 8);
+  const data={ id, name, level:$('tLevel').value, subjects, eligibleClasses, maxPerDay, maxPerWeek:parseInt($('tMaxWeek').value)||30, unavailableDays };
+
   if(editingIds.teacher){
     const i=state.teachers.findIndex(t=>t.id===editingIds.teacher);
     state.teachers[i]=data;
   } else state.teachers.push(data);
-  
+
   // Sort by ID
   state.teachers.sort((a,b) => a.id.localeCompare(b.id));
-  
+
+  // Teacher qualified for exactly one subject → auto-map them on that
+  // subject for every class they're eligible for (no manual mapping step needed).
+  if(subjects.length===1){
+    const sid=subjects[0];
+    const targetClasses=eligibleClasses.length?state.classes.filter(c=>eligibleClasses.includes(c.id)):state.classes;
+    targetClasses.forEach(c=>{
+      let cs=c.subjects.find(s=>s.subjectId===sid);
+      if(!cs){
+        cs={ subjectId:sid, periodsPerWeek:5, teacherIds:[] };
+        c.subjects.push(cs);
+      }
+      if(!cs.teacherIds.includes(id)) cs.teacherIds.push(id);
+    });
+  }
+
   save(); closeModal('teacherModal'); renderTeachers();
   toast('Teacher saved successfully!');
 }
 function deleteTeacher(id){
-  customConfirm('Delete this teacher? All their subject assignments will be removed.', () => {
+  const t=state.teachers.find(x=>x.id===id);
+  customConfirm(`Delete teacher "${t?t.name:id}" (${id})? All their subject assignments will be removed.`, () => {
     state.teachers=state.teachers.filter(t=>t.id!==id);
     state.classes.forEach(c=>c.subjects.forEach(s=>s.teacherIds=s.teacherIds.filter(t=>t!==id)));
     save(); renderTeachers(); toast('Teacher deleted','warn');
@@ -439,7 +560,7 @@ function saveTeacherMapping() {
         
         if(isChecked) {
           if(!cs) {
-            cs = { subjectId: sid, teacherIds: [], periods: 5 };
+            cs = { subjectId: sid, teacherIds: [], periodsPerWeek: 5 };
             c.subjects.push(cs);
           }
           if(!cs.teacherIds.includes(currentMappingTeacherId)) {
@@ -511,7 +632,8 @@ function saveSubject(){
   toast('Subject saved!');
 }
 function deleteSubject(id){
-  customConfirm('Delete this subject? It will be removed from all teachers and classes.', () => {
+  const s=state.subjects.find(x=>x.id===id);
+  customConfirm(`Delete subject "${s?s.name+' ('+s.code+')':id}"? It will be removed from all teachers and classes.`, () => {
     state.subjects=state.subjects.filter(s=>s.id!==id);
     state.teachers.forEach(t=>t.subjects=t.subjects.filter(sid=>sid!==id));
     state.classes.forEach(c=>c.subjects=c.subjects.filter(s=>s.subjectId!==id));
@@ -643,7 +765,7 @@ function saveClass(){
   }
   
   const inchargeId=$('cIncharge').value||'';
-  const maxPerDay=parseInt($('cMaxPerDay').value)||0;
+  const maxPerDay=Math.min(parseInt($('cMaxPerDay').value)||0, 8);
   const data={ id:editingIds.class||'cls_'+Date.now(), name, section:isSenior?'':section, course:isSenior?course:'', subjects, inchargeId, maxPerDay };
   if(editingIds.class){
     const i=state.classes.findIndex(c=>c.id===editingIds.class);
@@ -663,9 +785,15 @@ function saveClass(){
   toast('Class saved!');
 }
 function deleteClass(id){
-  customConfirm('Delete this class and all its subject mappings?', () => {
+  const cls=state.classes.find(c=>c.id===id);
+  const label=cls?getClassLabel(cls):id;
+  const usedBy=state.teachers.filter(t=>t.eligibleClasses&&t.eligibleClasses.includes(id));
+  const msg = usedBy.length
+    ? `Delete class "${label}"? It is used by these teachers: ${usedBy.map(t=>t.name).join(', ')}. Deleting it will NOT remove it from their eligible classes automatically — update that mapping yourself afterwards. Delete anyway?`
+    : `Delete class "${label}" and all its subject mappings?`;
+  customConfirm(msg, () => {
     state.classes=state.classes.filter(c=>c.id!==id);
-    save(); renderClasses(); toast('Class deleted','warn');
+    save(); renderClasses(); toast('Class deleted successfully!');
   }, { type:'danger', title:'Delete Class', confirmText:'Delete' });
 }
 function openClassSubjectsModal(clsId){
@@ -718,11 +846,17 @@ function openClassSubjectsModal(clsId){
     const subjPriority = subj.priority || 'semi-main';
     const priorityBadge = subjPriority === 'main' ? '<span class="badge badge-amber">Main</span>' : (subjPriority === 'free' ? '<span class="badge badge-green">Free</span>' : '<span class="badge badge-blue">Semi-Main</span>');
     const eligibleT = state.teachers.filter(t => t.subjects.includes(subj.id) && (!t.eligibleClasses || t.eligibleClasses.includes(cls.id)));
-    const tCheckboxes = eligibleT.map(t => `
+    const tCheckboxes = eligibleT.map(t => {
+      // Auto-select teachers explicitly mapped to this class (t.eligibleClasses
+      // includes it) the first time this subject row is rendered; once the
+      // mapping is saved, the stored teacherIds are the source of truth.
+      const isChecked = mapped ? mapped.teacherIds.includes(t.id) : (t.eligibleClasses && t.eligibleClasses.includes(cls.id));
+      return `
       <label class="check-item" style="font-size:.78rem;padding:.35rem .5rem;">
-        <input type="checkbox" data-subj="${subj.id}" data-tid="${t.id}" ${mapped && mapped.teacherIds.includes(t.id) ? 'checked' : ''}>
+        <input type="checkbox" data-subj="${subj.id}" data-tid="${t.id}" ${isChecked ? 'checked' : ''}>
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px;" title="${t.name}">${t.name}</span>
-      </label>`).join('');
+      </label>`;
+    }).join('');
     html += `<tr>
       <td style="text-align:center;"><input type="checkbox" data-subj="${subj.id}" class="include-cb" ${checked} onchange="toggleSubjInput(this)"></td>
       <td><strong style="color:var(--primary-h);">${subj.code}</strong><span style="display:block;font-size:.75rem;color:var(--text-2);">${subj.name}</span></td>
@@ -781,7 +915,7 @@ function saveClassSubjects(){
     const subjId=cb.dataset.subj;
     const periods=parseInt(document.querySelector(`.periods-inp[data-subj="${subjId}"]`).value)||0;
     const teacherIds=[...document.querySelectorAll(`input[data-subj="${subjId}"][data-tid]:checked`)].map(x=>x.dataset.tid);
-    if(periods>0 && teacherIds.length>0){
+    if(periods>0){
       cls.subjects.push({ subjectId:subjId, periodsPerWeek:periods, teacherIds });
     }
   });
@@ -1315,6 +1449,11 @@ function phase2AssignTeachers(subjectPlan, days, periods){
       const day=days[d];
       const subjectId=subjectPlan.subjectPlan[cls.id][d][0]; // P1 = index 0
       if(!subjectId) continue;
+      // Never swap the subject into the incharge's own — only take P1 if
+      // they're actually a mapped teacher for whatever subject already
+      // sits there. Otherwise leave it for Pass 1 to assign normally.
+      const inchargeMapping=cls.subjects.find(s=>s.subjectId===subjectId);
+      if(!inchargeMapping || !inchargeMapping.teacherIds.includes(inchargeTeacher.id)) continue;
       if(timetable.teacherWeeklyCount[inchargeTeacher.id]>=inchargeTeacher.maxPerWeek) continue;
       if(inchargeTeacher.unavailableDays&&inchargeTeacher.unavailableDays.includes(day)) continue;
       if(!isTeacherGloballyFree(timetable,inchargeTeacher.id,d,0)) continue;
@@ -1625,12 +1764,14 @@ function renderHistory(){
 function restoreHistory(index){
   customConfirm('This will replace your current active timetable with the selected historical version.', () => {
     state.timetable = JSON.parse(JSON.stringify(state.history[index].timetable));
-    save(); switchView('class'); toast('Timetable restored from history!','success');
+    save(); goToTab('view'); switchView('class'); toast('Timetable restored from history!','success');
   }, { type:'warn', title:'Restore Timetable', confirmText:'Restore' });
 }
 
 function deleteHistory(index){
-  customConfirm('Delete this history entry permanently?', () => {
+  const h=state.history[index];
+  const label=h?new Date(h.timestamp).toLocaleString():`entry #${index+1}`;
+  customConfirm(`Delete history build "${label}" permanently?`, () => {
     state.history.splice(index, 1); save(); renderHistory(); toast('History deleted!','success');
   }, { type:'danger', title:'Delete Entry', confirmText:'Delete' });
 }

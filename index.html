@@ -97,14 +97,33 @@
     </div>
 
     <div class="header-actions">
+      <!-- Desktop notification bell -->
+      <button id="notifBtnDesktop" class="btn-icon desktop-only notif-btn" onclick="toggleNotifDropdown(event)" title="Notifications">
+        <i class="ri-notification-3-line"></i>
+        <span id="notifBadgeDesktop" class="notif-badge hidden">0</span>
+      </button>
       <!-- Desktop theme toggle -->
       <button id="themeToggle" class="btn-icon desktop-only" onclick="toggleTheme()" title="Toggle theme">
         <i id="themeIcon" class="ri-sun-line"></i>
+      </button>
+      <!-- Mobile notification bell (next to nav menu) -->
+      <button id="notifBtnMobile" class="btn-icon mobile-only notif-btn" onclick="toggleNotifDropdown(event)" title="Notifications">
+        <i class="ri-notification-3-line"></i>
+        <span id="notifBadgeMobile" class="notif-badge hidden">0</span>
       </button>
       <!-- Mobile hamburger (top-right) -->
       <button class="btn-icon mobile-only" id="mobileMenuBtn" onclick="openMobileNav()" title="Menu">
         <i class="ri-menu-3-line"></i>
       </button>
+
+      <!-- Notification dropdown panel -->
+      <div id="notifDropdown" class="notif-dropdown hidden">
+        <div class="notif-dropdown-header">
+          <span>Notifications</span>
+          <button class="notif-clear-btn" onclick="clearNotifications()">Clear all</button>
+        </div>
+        <div id="notifList" class="notif-list"></div>
+      </div>
     </div>
   </header>
 
@@ -491,7 +510,7 @@
       </div>
       <div>
         <label>Max Periods Per Day *</label>
-        <input id="tMaxDay" type="number" class="input" value="6" min="1" max="10">
+        <input id="tMaxDay" type="number" class="input" value="6" min="1" max="8" oninput="clampMaxPerDay(this)">
       </div>
       <div>
         <label>Max Periods Per Week *</label>
@@ -622,7 +641,7 @@
       </div>
       <div>
         <label>Max Periods Per Day <span style="text-transform:none;letter-spacing:0;font-weight:400;">(0 = unlimited)</span></label>
-        <input id="cMaxPerDay" type="number" class="input" value="0" min="0" max="12" placeholder="0 = no class-level cap">
+        <input id="cMaxPerDay" type="number" class="input" value="0" min="0" max="8" placeholder="0 = no class-level cap" oninput="clampMaxPerDay(this)">
       </div>
     </div>
     <div class="flex gap-2 mt-5 pt-4" style="border-top:1px solid var(--border);">
